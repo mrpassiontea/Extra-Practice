@@ -312,8 +312,10 @@ function updateStartButtonState(startButton, selectedCount) {
             .prop('disabled', false)
             .text(`Start Review (${selectedCount} Selected)`)
             .css(modalStyling.startButton)
-            .removeClass('disabled')
-            .css('opacity', '1');
+            .css({
+                'opacity': '1', 
+                pointerEvents: 'inherit'
+            });
     } else {
         startButton
             .prop('disabled', true)
@@ -457,7 +459,13 @@ async function handleRadiclePractice() {
     
     $("#ep-practice-modal-start").on("click", function() {
         if (selectedRadicals.size > 0) {
-            const selectedRadicalsList = Array.from(selectedRadicals);
+            const selectedRadicalsList = Array.from(selectedRadicals).map(id => 
+                radicals.find(radical => radical.id === id)
+            );
+            const reviewSession = new ReviewSession(selectedRadicalsList);
+            $modal.remove();
+            startReviewSession(reviewSession);
+            //const selectedRadicalsList = Array.from(selectedRadicals);
             console.log('Starting review with radicals:', selectedRadicalsList);
         }
     });
@@ -599,4 +607,136 @@ function createRadicalElement(radical) {
     }
     
     return container;
+}
+
+class ReviewSession {
+    constructor(selectedRadicals) {
+        console.log("in constructor", selectedRadicals);
+        this.originalRadicals = selectedRadicals;
+        this.remainingRadicals = this.shuffleArray([...selectedRadicals]);
+        this.currentRadical = null;
+        this.correctAnswers = new Set();
+    }
+
+    shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+    }
+
+    nextRadical() {
+        if (this.remainingRadicals.length === 0) {
+            this.remainingRadicals = this.shuffleArray(
+                this.originalRadicals.filter(radical => 
+                    !this.correctAnswers.has(radical.id) &&
+                    (!this.currentRadical || radical.id !== this.currentRadical.id)
+                )
+            );
+        }
+        this.currentRadical = this.remainingRadicals.shift();
+    }
+
+    checkAnswer(userAnswer) {
+        const isCorrect = this.currentRadical.meaning.toLowerCase() === userAnswer.toLowerCase();
+        if (isCorrect) {
+            this.correctAnswers.add(this.currentRadical.id);
+        }
+        return isCorrect;
+    }
+
+    isComplete() {
+        return this.correctAnswers.size === this.originalRadicals.length;
+    }
+
+    getProgress() {
+        return {
+            current: this.correctAnswers.size,
+            total: this.originalRadicals.length
+        };
+    }
+}
+
+function startReviewSession(reviewSession) {
+    const $reviewModal = $(reviewModalTemplate).appendTo("body");
+    console.log("start review session", reviewSession);
+    
+    // Initialize CSS for the review modal elements
+    $reviewModal.css(reviewModalStyling.container);
+    $("#ep-review-modal-header").css(reviewModalStyling.header);
+    $("#ep-review-content").css(reviewModalStyling.content);
+    $("#ep-review-character").css(reviewModalStyling.character);
+    $("#ep-review-input-section").css(reviewModalStyling.inputSection);
+    $("#ep-review-answer").css(reviewModalStyling.input);
+    $("#ep-review-submit").css(reviewModalStyling.submitButton);
+    
+    function showCurrentRadical() {
+        const currentRadical = reviewSession.currentRadical;
+        $("#ep-review-character").empty();
+        
+        if (currentRadical.character) {
+            $("#ep-review-character").text(currentRadical.character);
+        } else if (currentRadical.svg) {
+            loadSvgContent(currentRadical.svg)
+                .then(svgContent => {
+                    $("#ep-review-character").html(svgContent);
+                })
+                .catch(error => {
+                    console.error('Error loading SVG:', error);
+                    $("#ep-review-character").text(currentRadical.meaning);
+                });
+        }
+        
+        $("#ep-review-answer").val("");
+        $("#ep-review-result").hide();
+        $("#ep-review-explanation").hide();
+        updateProgress();
+    }
+    
+    function updateProgress() {
+        const progress = reviewSession.getProgress();
+        $("#ep-review-progress-correct").text(progress.current);
+        $("#ep-review-progress-total").text(progress.total);
+    }
+    
+    function handleSubmit() {
+        const userAnswer = $("#ep-review-answer").val().trim();
+        const isCorrect = reviewSession.checkAnswer(userAnswer);
+        
+        if (isCorrect) {
+            $("#ep-review-result-message").text("Correct!");
+            $("#ep-review-show-hint").hide();
+            
+            if (reviewSession.isComplete()) {
+                $("#ep-review-result-message").text("Review completed!");
+                $("#ep-review-submit").prop("disabled", true);
+            } else {
+                reviewSession.nextRadical();
+                setTimeout(showCurrentRadical, 1000);
+            }
+        } else {
+            $("#ep-review-result-message").text("Incorrect. Please try again.");
+            $("#ep-review-show-hint").show();
+        }
+        
+        $("#ep-review-result").show();
+    }
+    
+    function showHint() {
+        const currentRadical = reviewSession.currentRadical;
+        $("#ep-review-meaning").text(currentRadical.meaning);
+        $("#ep-review-mnemonic").text(currentRadical.meaningMnemonic);
+        $("#ep-review-explanation").show();
+    }
+    
+    $("#ep-review-submit").on("click", handleSubmit);
+    $("#ep-review-show-hint").on("click", showHint);
+    $("#ep-review-exit").on("click", function() {
+        enableScroll();
+        $reviewModal.remove();
+    });
+    
+    reviewSession.nextRadical();
+    showCurrentRadical();
 }
