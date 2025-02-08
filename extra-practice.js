@@ -11,12 +11,9 @@
 // @run-at       document-end
 // ==/UserScript==
 
-// HTML Template
+// HTML Templates
 const modalTemplate = `
     <div id='ep-practice-modal'>
-        <div id='ep-practice-modal-btn-close-container'>
-            <button id='ep-practice-modal-close'>Close</button>
-        </div>
         <div id='ep-practice-modal-content'>
             <div id='ep-practice-modal-welcome'>
                 <h1>Hello, <span id="username"></span></h1>
@@ -26,6 +23,37 @@ const modalTemplate = `
             <div id='ep-practice-modal-grid'></div>
             <div id='ep-practice-modal-footer'>
                 <button id='ep-practice-modal-start' disabled>Start Review (0 Selected)</button>
+                <button id='ep-practice-modal-close'>Exit</button>
+            </div>
+        </div>
+    </div>
+`;
+
+const reviewModalTemplate = `
+    <div id='ep-review-modal'>
+        <div id='ep-review-modal-header'>
+            <div id='ep-review-progress'>
+                <span id='ep-review-progress-correct'>0</span>/<span id='ep-review-progress-total'>0</span> Correct
+            </div>
+            <button id='ep-review-exit'>End Review</button>
+        </div>
+        
+        <div id='ep-review-content'>
+            <div id='ep-review-character'></div>
+            
+            <div id='ep-review-input-section'>
+                <input type='text' id='ep-review-answer' placeholder='Enter meaning...' />
+                <button id='ep-review-submit'>Submit</button>
+            </div>
+
+            <div id='ep-review-result' style='display: none;'>
+                <div id='ep-review-result-message'></div>
+                <button id='ep-review-show-hint' style='display: none;'>Show Answer</button>
+            </div>
+
+            <div id='ep-review-explanation' style='display: none;'>
+                <h3>Meaning: <span id='ep-review-meaning'></span></h3>
+                <p id='ep-review-mnemonic'></p>
             </div>
         </div>
     </div>
@@ -59,7 +87,7 @@ const practiceBtnKanjiStyling = {
   "font-weight": "500",
 };
 
-// Modal Styling
+// Radical/Kanji Selection Modal Styling
 
 const modalStyling = {
     container: {
@@ -74,14 +102,6 @@ const modalStyling = {
         justifyContent: "center",
         alignItems: "center",
         zIndex: "1000"
-    },
-    closeContainer: {
-        position: "absolute",
-        top: "2rem",
-        right: "2rem",
-        display: "flex",
-        justifyContent: "flex-end",
-        width: "auto"
     },
     welcomeTextContainer: {
         color: "white",
@@ -99,10 +119,10 @@ const modalStyling = {
     },
     exitButton: {
         border: "1px solid white",
-        backgroundColor: "transparent",
+        backgroundColor: "rgb(255,255,255,0.9)",
         padding: "8px 16px",
-        color: "white",
-        fontWeight: "400",
+        color: "black",
+        fontWeight: "500",
         borderRadius: "3px",
         cursor: "pointer"
     },
@@ -144,7 +164,8 @@ const modalStyling = {
         display: "flex",
         justifyContent: "center",
         width: "100%",
-        maxWidth: "600px"
+        maxWidth: "600px",
+        gap: "1rem"
     },
     startButton: {
         background: "#0598e4",
@@ -154,11 +175,13 @@ const modalStyling = {
         border: "none",
         fontWeight: "500",
         cursor: "pointer",
-        transition: "opacity 0.2s ease"
+        transition: "opacity 0.2s ease",
+        opacity: "1" 
     },
     startButtonDisabled: {
         opacity: "0.5",
-        cursor: "not-allowed"
+        cursor: "not-allowed",
+        pointerEvents: "none" 
     },
     selectAllButton: {
         color: "white",
@@ -178,6 +201,66 @@ const modalStyling = {
         display: "flex",
         flexDirection: "column",
         alignItems: "center"
+    }
+};
+
+// Review Modal Styling
+const reviewModalStyling = {
+    container: {
+        position: "fixed",
+        top: "0",
+        left: "0",
+        width: "100%",
+        height: "100%",
+        backgroundColor: "rgba(0, 0, 0, 0.9)",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: "1000"
+    },
+    header: {
+        width: "100%",
+        maxWidth: "600px",
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        padding: "1rem",
+        color: "white"
+    },
+    content: {
+        width: "100%",
+        maxWidth: "600px",
+        padding: "2rem",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: "2rem"
+    },
+    character: {
+        fontSize: "4rem",
+        color: "white",
+        marginBottom: "2rem"
+    },
+    inputSection: {
+        width: "100%",
+        display: "flex",
+        gap: "1rem"
+    },
+    input: {
+        flex: "1",
+        padding: "0.75rem",
+        fontSize: "1rem",
+        borderRadius: "4px",
+        border: "none"
+    },
+    submitButton: {
+        background: "#0598e4",
+        color: "white",
+        padding: "0.75rem 1.5rem",
+        borderRadius: "4px",
+        border: "none",
+        cursor: "pointer"
     }
 };
 
@@ -228,7 +311,9 @@ function updateStartButtonState(startButton, selectedCount) {
         startButton
             .prop('disabled', false)
             .text(`Start Review (${selectedCount} Selected)`)
-            .css(modalStyling.startButton);
+            .css(modalStyling.startButton)
+            .removeClass('disabled')
+            .css('opacity', '1');
     } else {
         startButton
             .prop('disabled', true)
@@ -269,7 +354,6 @@ async function handleRadiclePractice() {
     
     // Initialize CSS
     $modal.css(modalStyling.container);
-    $("#ep-practice-modal-btn-close-container").css(modalStyling.closeContainer);
     $("#ep-practice-modal-welcome").css(modalStyling.welcomeTextContainer);
     $("#ep-practice-modal-welcome h1").css(modalStyling.welcomeTextUsername);
     $("#ep-practice-modal-close").css(modalStyling.exitButton);
@@ -283,8 +367,16 @@ async function handleRadiclePractice() {
         const selectAllButton = $("#ep-practice-modal-select-all");
         if (selectedRadicals.size === totalRadicalsInLevel) {
             selectAllButton.text("Deselect All");
+            selectAllButton.css({
+                "color": "red",
+                "border-color": "red"
+            });
         } else {
             selectAllButton.text("Select All");
+            selectAllButton.css({
+                "color": "white",
+                "border-color": "white"
+            });
         }
     }
 
