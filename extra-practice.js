@@ -31,29 +31,31 @@ const modalTemplate = `
 
 const reviewModalTemplate = `
     <div id='ep-review-modal'>
-        <div id='ep-review-modal-header'>
-            <div id='ep-review-progress'>
-                <span id='ep-review-progress-correct'>0</span>/<span id='ep-review-progress-total'>0</span> Correct
-            </div>
-            <button id='ep-review-exit'>End Review</button>
-        </div>
-        
-        <div id='ep-review-content'>
-            <div id='ep-review-character'></div>
-            
-            <div id='ep-review-input-section'>
-                <input type='text' id='ep-review-answer' placeholder='Enter meaning...' />
-                <button id='ep-review-submit'>Submit</button>
+        <div id='ep-review-modal-wrapper'>
+            <div id='ep-review-modal-header'>
+                <div id='ep-review-progress'>
+                    <span id='ep-review-progress-correct'>0</span>/<span id='ep-review-progress-total'>0</span> Correct
+                </div>
+                <button id='ep-review-exit'>End Review</button>
             </div>
 
-            <div id='ep-review-result' style='display: none;'>
-                <div id='ep-review-result-message'></div>
-                <button id='ep-review-show-hint' style='display: none;'>Show Answer</button>
-            </div>
+            <div id='ep-review-content'>
+                <div id='ep-review-character'></div>
 
-            <div id='ep-review-explanation' style='display: none;'>
-                <h3>Meaning: <span id='ep-review-meaning'></span></h3>
-                <p id='ep-review-mnemonic'></p>
+                <div id='ep-review-input-section'>
+                    <input type='text' id='ep-review-answer' placeholder='Enter meaning...' />
+                    <button id='ep-review-submit'>Submit</button>
+                </div>
+
+                <div id='ep-review-result' style='display: none;'>
+                    <div id='ep-review-result-message'></div>
+                    <button id='ep-review-show-hint' style='display: none;'>Show Answer</button>
+                </div>
+
+                <div id='ep-review-explanation' style='display: none;'>
+                    <h3>Meaning: <span id='ep-review-meaning'></span></h3>
+                    <p id='ep-review-mnemonic'></p>
+                </div>
             </div>
         </div>
     </div>
@@ -206,61 +208,127 @@ const modalStyling = {
 
 // Review Modal Styling
 const reviewModalStyling = {
-    container: {
+    backdrop: {
         position: "fixed",
         top: "0",
         left: "0",
         width: "100%",
         height: "100%",
-        backgroundColor: "rgba(0, 0, 0, 0.9)",
+        backgroundColor: "rgba(0, 0, 0, 0.6)",
+        zIndex: "1000",
         display: "flex",
-        flexDirection: "column",
         alignItems: "center",
-        justifyContent: "center",
-        zIndex: "1000"
+        justifyContent: "center"
+    },
+    container: {
+        backgroundColor: "#FFF",
+        borderRadius: "8px",
+        boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+        maxWidth: "600px",
+        width: "100%",
+        display: "flex",
+        flexDirection: "column"
     },
     header: {
-        width: "100%",
-        maxWidth: "600px",
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
-        padding: "1rem",
-        color: "white"
+        padding: "1.5rem",
+        borderBottom: "1px solid #E5E7EB"
+    },
+    progress: {
+        fontWeight: "bold",
+        fontSize: "1.25rem",
+        color: "#1F2937"
+    },
+    exitButton: {
+        backgroundColor: "transparent",
+        color: "#3B82F6",
+        border: "1px solid #3B82F6",
+        borderRadius: "4px",
+        padding: "0.75rem 1.5rem",
+        fontWeight: "500",
+        cursor: "pointer",
+        transition: "background-color 0.2s ease"
+    },
+    exitButtonHover: {
+        backgroundColor: "#EFF6FF"
     },
     content: {
-        width: "100%",
-        maxWidth: "600px",
         padding: "2rem",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        gap: "2rem"
+        gap: "2rem",
+        textAlign: "center"
     },
     character: {
-        fontSize: "4rem",
-        color: "white",
+        fontSize: "6rem",
+        color: "#1F2937",
         marginBottom: "2rem"
     },
     inputSection: {
         width: "100%",
         display: "flex",
-        gap: "1rem"
+        gap: "1rem",
+        marginBottom: "2rem" 
     },
     input: {
         flex: "1",
         padding: "0.75rem",
         fontSize: "1rem",
-        borderRadius: "4px",
-        border: "none"
+        borderRadius: "4px", 
+        border: "1px solid #D1D5DB"
     },
     submitButton: {
-        background: "#0598e4",
-        color: "white",
-        padding: "0.75rem 1.5rem",
+        backgroundColor: "#3B82F6",
+        color: "#FFF",
+        padding: "0.75rem 1.5rem",  
         borderRadius: "4px",
         border: "none",
-        cursor: "pointer"
+        fontWeight: "500", 
+        cursor: "pointer",
+        transition: "background-color 0.2s ease"
+    },
+    submitButtonHover: {
+        backgroundColor: "#2563EB"  
+    },
+    resultMessage: {
+        fontSize: "1.5rem",
+        fontWeight: "bold",
+        marginBottom: "1rem"
+    },
+    correctMessage: {
+        color: "#10B981"
+    },
+    incorrectMessage: {
+        color: "#EF4444"
+    },
+    hintButton: { 
+        backgroundColor: "transparent",
+        color: "#3B82F6",
+        border: "1px solid #3B82F6",
+        borderRadius: "4px",
+        padding: "0.5rem 1rem",
+        cursor: "pointer",
+        transition: "background-color 0.2s ease"
+    },
+    hintButtonHover: {
+        backgroundColor: "#EFF6FF"
+    },
+    explanation: {
+        lineHeight: "1.6",
+        color: "#4B5563",
+        fontSize: "1.125rem" 
+    },
+    meaningLabel: {
+        fontWeight: "bold",
+        fontSize: "1.25rem",
+        color: "#1F2937" 
+    },
+    mnemonic: {
+        fontStyle: "italic",
+        color: "#6B7280"
     }
 };
 
@@ -465,7 +533,6 @@ async function handleRadiclePractice() {
             const reviewSession = new ReviewSession(selectedRadicalsList);
             $modal.remove();
             startReviewSession(reviewSession);
-            //const selectedRadicalsList = Array.from(selectedRadicals);
             console.log('Starting review with radicals:', selectedRadicalsList);
         }
     });
@@ -659,17 +726,29 @@ class ReviewSession {
 }
 
 function startReviewSession(reviewSession) {
-    const $reviewModal = $(reviewModalTemplate).appendTo("body");
-    console.log("start review session", reviewSession);
-    
-    // Initialize CSS for the review modal elements
-    $reviewModal.css(reviewModalStyling.container);
+    const $reviewBackdrop = $('<div>').css(reviewModalStyling.backdrop);
+    const $reviewModal = $(reviewModalTemplate).appendTo($reviewBackdrop);
+    $reviewBackdrop.appendTo('body');
+    $reviewModal.find('#ep-review-modal-wrapper').css(reviewModalStyling.container);
+
     $("#ep-review-modal-header").css(reviewModalStyling.header);
     $("#ep-review-content").css(reviewModalStyling.content);
     $("#ep-review-character").css(reviewModalStyling.character);
     $("#ep-review-input-section").css(reviewModalStyling.inputSection);
     $("#ep-review-answer").css(reviewModalStyling.input);
     $("#ep-review-submit").css(reviewModalStyling.submitButton);
+    $("#ep-review-meaning").css(reviewModalStyling.meaningLabel);
+    $("#ep-review-mnemonic").css(reviewModalStyling.mnemonic);
+    $("#ep-review-result-message").css(reviewModalStyling.resultMessage);
+    $("#ep-review-exit")
+        .css(reviewModalStyling.exitButton)
+        .on("mouseenter", function() {
+            $(this).addClass(reviewModalStyling.exitButtonHover);
+        })
+        .on("mouseleave", function() {
+            $(this).removeClass(reviewModalStyling.exitButtonHover);
+        });
+    $("#ep-review-show-hint").css(reviewModalStyling.hintButton);
     
     function showCurrentRadical() {
         const currentRadical = reviewSession.currentRadical;
@@ -735,6 +814,7 @@ function startReviewSession(reviewSession) {
     $("#ep-review-exit").on("click", function() {
         enableScroll();
         $reviewModal.remove();
+        $reviewBackdrop.remove();
     });
     
     reviewSession.nextRadical();
