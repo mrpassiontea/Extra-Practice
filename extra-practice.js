@@ -43,7 +43,7 @@ const reviewModalTemplate = `
                 <div id='ep-review-character'></div>
 
                 <div id='ep-review-input-section'>
-                    <input type='text' id='ep-review-answer' placeholder='Enter meaning...' tabindex="1" />
+                    <input type='text' id='ep-review-answer' placeholder='Enter meaning...' tabindex="1" autofocus />
                     <button id='ep-review-submit' tabindex="2">Submit</button>
                 </div>
 
@@ -812,18 +812,18 @@ function startReviewSession(reviewSession) {
                 });
         }
         
-        $("#ep-review-answer").val("");
+        $("#ep-review-answer").val("").focus();
         $("#ep-review-result").hide();
         $("#ep-review-explanation").hide();
         updateProgress();
     }
 
     function resetUIForNextCard() {
-        $("#ep-review-input-section").show();
+        showReviewInputSection();
         $("#ep-review-explanation").hide();
         $("#ep-review-character").css('marginBottom', '2rem');
         $("#ep-review-submit").show();
-        $("#ep-review-answer").prop('disabled', false);
+        $("#ep-review-answer").prop('disabled', false).focus();
         $("#ep-review-result").hide();
         $("#ep-review-result-message").hide();
         $("#ep-review-modal-header").css(reviewModalStyling.header);
@@ -889,6 +889,7 @@ function startReviewSession(reviewSession) {
 
     function showReviewInputSection () {
         $("#ep-review-input-section").show();
+        $("#ep-review-answer").focus();
     }
 
     function renderContinueReviewBtn() {
@@ -933,7 +934,7 @@ function startReviewSession(reviewSession) {
                     reviewSession.nextRadical();
                     showCurrentRadical();
                     $("#ep-review-submit").show();
-                    $("#ep-review-answer").prop('disabled', false);
+                    $("#ep-review-answer").prop('disabled', false).focus();
                     $("ep-review-answer").prop('disabled', false);
                 }, 1000);
             }
@@ -1004,7 +1005,18 @@ function startReviewSession(reviewSession) {
                 fontWeight: 'bold',
             })
             .prependTo("#ep-review-modal-header");
-        $("#ep-review-modal-header").css("borderBottom", "none");
+        $("<p>")
+            .text("Closing in 3 seconds...")
+            .css({
+                color: '#333',
+                textAlign: 'center',
+                margin: '0'
+            })
+            .appendTo("#ep-review-modal-header");
+        $("#ep-review-modal-header").css({
+            "borderBottom": "none",
+            "flex-direction": "column",
+        });
         $("#ep-review-progress").remove();    
         $("#ep-review-content").remove();
         $("#ep-review-exit").remove();
