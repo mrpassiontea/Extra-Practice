@@ -242,7 +242,8 @@ const reviewModalStyling = {
         justifyContent: "space-between",
         alignItems: "center",
         padding: "1.5rem",
-        borderBottom: "1px solid #E5E7EB"
+        borderBottom: "1px solid #E5E7EB",
+        gap: "1rem"
     },
     progress: {
         fontWeight: "bold",
@@ -251,8 +252,8 @@ const reviewModalStyling = {
     },
     exitButton: {
         backgroundColor: "transparent",
-        color: "#3B82F6",
-        border: "1px solid #3B82F6",
+        color: "#eb019c",
+        border: "1px solid #eb019c",
         borderRadius: "4px",
         padding: "0.75rem 1.5rem",
         fontWeight: "500",
@@ -304,7 +305,8 @@ const reviewModalStyling = {
     resultMessage: {
         fontSize: "1.5rem",
         fontWeight: "bold",
-        marginBottom: "1rem"
+        marginBottom: "1rem",
+        color: '#4A90E2'
     },
     correctMessage: {
         color: "#10B981"
@@ -317,7 +319,7 @@ const reviewModalStyling = {
         color: "#3B82F6",
         border: "1px solid #3B82F6",
         borderRadius: "4px",
-        padding: "0.5rem 1rem",
+        padding: "0.75rem 1.5rem",
         cursor: "pointer",
         transition: "background-color 0.2s ease"
     },
@@ -825,19 +827,43 @@ function startReviewSession(reviewSession) {
         $("#ep-review-result").hide();
         $("#ep-review-result-message").hide();
         $("#ep-review-modal-header").css(reviewModalStyling.header);
-        $("#ep-review-progress").css(reviewModalStyling.progress);
     }
 
     function showCompletionUI() {
+        const languageLearningQuotes = [
+            "Language is effort",
+            "One character a day",
+            "Continuation is power",
+            "Learn by doing",
+            "Little by little, steadily"
+        ];
+    
+        const randomQuote = languageLearningQuotes[Math.floor(Math.random() * languageLearningQuotes.length)];
+    
         const progress = reviewSession.getProgress();
         $("#ep-review-progress-correct").text(progress.total);
+        
         $("#ep-review-result-message")
             .text("Review completed!")
             .css(reviewModalStyling.resultMessage)
             .show();
+    
+        $("<p>")
+            .text(`"${randomQuote}"`)
+            .css({
+                color: '#666',
+                fontStyle: 'italic',
+                textAlign: 'center',
+                margin: '15px 0 0 0',
+                fontSize: '0.9em'
+            })
+            .insertAfter("#ep-review-result-message");
+    
+        $("#ep-review-content").css("gap", "1rem");
         $("#ep-review-character").hide();
         $("#ep-review-input-section").hide();
         $("#ep-review-explanation").hide();
+    
         $("<button>")
             .text("Study Again?")
             .css(reviewModalStyling.submitButton)
@@ -852,8 +878,42 @@ function startReviewSession(reviewSession) {
     
     function updateProgress() {
         const progress = reviewSession.getProgress();
+        $("#ep-review-progress").css(reviewModalStyling.progress);
         $("#ep-review-progress-correct").text(progress.current);
         $("#ep-review-progress-total").text(progress.total);
+    }
+
+    function hideReviewInputSection () {
+        $("#ep-review-input-section").hide();
+    }
+
+    function showReviewInputSection () {
+        $("#ep-review-input-section").show();
+    }
+
+    function renderContinueReviewBtn() {
+        $("#continueReviewBtn").remove();
+        
+        const continueReviewBtn = $("<button id='continueReviewBtn'>")
+            .text("Continue Review")
+            .css(reviewModalStyling.submitButton)
+            .on("click", function () {
+                $(this).remove();
+                if (reviewSession.isComplete()) {
+                    showCompletionUI();
+                } else {
+                    resetUIForNextCard();
+                    reviewSession.nextRadical();
+                    showCurrentRadical();
+                }
+            });
+
+             // Explicitly check both visibility and display
+            if ($("#ep-review-explanation").is(':visible')) {
+                continueReviewBtn.css("margin-top", "1rem").appendTo($("#ep-review-explanation"));
+            } else if ($("#ep-review-content").is(':visible')) {
+                continueReviewBtn.appendTo($("#ep-review-result"));
+            }
     }
     
     function handleSubmit() {
@@ -861,27 +921,13 @@ function startReviewSession(reviewSession) {
         const isCorrect = reviewSession.checkAnswer(userAnswer);
         
         if (isCorrect) {
-            $("#ep-review-result-message").text("Correct!").css(reviewModalStyling.correctMessage);
+            $("#ep-review-result-message").text("Correct!").css(reviewModalStyling.correctMessage).show();
             $("#ep-review-show-hint").hide();
             $("#ep-review-submit").hide();
             $("#ep-review-answer").prop('disabled', true);
             
             if (reviewSession.isComplete()) {
-                const progress = reviewSession.getProgress();
-                $("#ep-review-progress-correct").text(progress.total);
-                $("#ep-review-character").hide();
-                $("#ep-review-result-message").text("Review completed!");
-                $("#ep-review-input-section").hide();
-                $("<button>")
-                    .text("Study Again?")
-                    .css(reviewModalStyling.submitButton)
-                    .on("click", function() {
-                        enableScroll();
-                        $reviewModal.remove();
-                        $reviewBackdrop.remove();
-                        handleRadiclePractice();
-                    })
-                    .appendTo("#ep-review-content");
+                showCompletionUI();
             } else {
                 setTimeout(() => {
                     reviewSession.nextRadical();
@@ -892,12 +938,14 @@ function startReviewSession(reviewSession) {
                 }, 1000);
             }
         } else {
+            hideReviewInputSection();
+            $("#ep-review-character").css('marginBottom', '0');
             $("#ep-review-result-message")
-                .text("Incorrect. Please try again.")
+                .text("Incorrect")
                 .css(reviewModalStyling.incorrectMessage);
             $("#ep-review-show-hint").show();
+            renderContinueReviewBtn();  
         }
-        
         $("#ep-review-result").show();
     }
     
@@ -925,29 +973,46 @@ function startReviewSession(reviewSession) {
         $("#ep-review-mnemonic").css(reviewModalStyling.mnemonic);
 
         $("#ep-review-explanation").show();
-
-        $("<button>")
-            .text("Continue Review")
-            .css(reviewModalStyling.submitButton)
-            .on("click", function () {
-                $(this).remove();
-                if (reviewSession.isComplete()) {
-                    showCompletionUI();
-                } else {
-                    resetUIForNextCard();
-                    reviewSession.nextRadical();
-                    showCurrentRadical();
-                }
-            })
-            .appendTo("#ep-review-content");
+        renderContinueReviewBtn();
     }
     
     $("#ep-review-submit").on("click", handleSubmit);
     $("#ep-review-show-hint").on("click", showHint);
     $("#ep-review-exit").on("click", function() {
-        enableScroll();
-        $reviewModal.remove();
-        $reviewBackdrop.remove();
+        const progress = reviewSession.getProgress();
+        const percentageCorrect = Math.round((progress.current / progress.total) * 100);
+        
+        // Create a message based on their performance
+        let performanceMessage = "";
+        if (percentageCorrect === 100) {
+            performanceMessage = "Perfect Practice! 🌟";
+        } else if (percentageCorrect >= 80) {
+            performanceMessage = "Great Job! 👏";
+        } else if (percentageCorrect >= 50) {
+            performanceMessage = "Keep Practicing! 💪";
+        } else {
+            performanceMessage = "Don't Give Up! 🌱";
+        }
+
+        // Create and prepend the performance message
+        $("<h1>")
+            .text(`${performanceMessage} ${progress.current}/${progress.total} Correct (${percentageCorrect}%)`)
+            .css({
+                color: '#333',
+                textAlign: 'center',
+                margin: '10px 0',
+                fontWeight: 'bold',
+            })
+            .prependTo("#ep-review-modal-header");
+        $("#ep-review-modal-header").css("borderBottom", "none");
+        $("#ep-review-progress").remove();    
+        $("#ep-review-content").remove();
+        $("#ep-review-exit").remove();
+        setTimeout(() => {
+            enableScroll();
+            $reviewModal.remove();
+            $reviewBackdrop.remove();
+        }, 3000);
     });
     
     reviewSession.nextRadical();
