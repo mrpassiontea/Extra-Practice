@@ -574,7 +574,32 @@ async function handleRadiclePractice() {
     });
 }
 
-function handleKanjiPractice() {}
+function handleKanjiPractice() {
+    disableScroll();
+    
+    const $modal = $(modalTemplate).appendTo("body");
+    $("#username").text($("p.user-summary__username:first").text());
+    
+    // Initialize CSS with kanji-specific colors
+    $modal.css(modalStyling.container);
+    $("#ep-practice-modal-welcome").css(modalStyling.welcomeTextContainer);
+    $("#ep-practice-modal-welcome h1").css(modalStyling.welcomeTextUsername);
+    $("#ep-practice-modal-welcome h2").text("Please select all the Kanji that you would like to include in your practice session");
+    $("#ep-practice-modal-close").css(modalStyling.exitButton);
+    $("#ep-practice-modal-grid").css(modalStyling.grid);
+    $("#ep-practice-modal-footer").css(modalStyling.footer);
+    $("#ep-practice-modal-start")
+        .css(modalStyling.startButton)
+        .css({ 'background-color': '#eb019c' }); // Use kanji pink instead of radical blue
+    $("#ep-practice-modal-select-all").css(modalStyling.selectAllButton);
+    $("#ep-practice-modal-content").css(modalStyling.contentWrapper);
+    
+    // Close button functionality
+    $("#ep-practice-modal-close").on("click", function () {
+        enableScroll();
+        $modal.remove();
+    });
+}
 
 function disableScroll() {
   const scrollPosition = window.scrollY || document.documentElement.scrollTop;
