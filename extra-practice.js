@@ -43,8 +43,8 @@ const reviewModalTemplate = `
                 <div id='ep-review-character'></div>
 
                 <div id='ep-review-input-section'>
-                    <input type='text' id='ep-review-answer' placeholder='Enter meaning...' />
-                    <button id='ep-review-submit'>Submit</button>
+                    <input type='text' id='ep-review-answer' placeholder='Enter meaning...' tabindex="1" />
+                    <button id='ep-review-submit' tabindex="2">Submit</button>
                 </div>
 
                 <div id='ep-review-result' style='display: none;'>
@@ -53,8 +53,14 @@ const reviewModalTemplate = `
                 </div>
 
                 <div id='ep-review-explanation' style='display: none;'>
-                    <h3>Meaning: <span id='ep-review-meaning'></span></h3>
-                    <p id='ep-review-mnemonic'></p>
+                    <h3>
+                        <span id='ep-review-meaning-label'>Meaning:</span>
+                        <span id='ep-review-meaning'></span>
+                    </h3>
+                    <div class='mnemonic-container'>
+                        <span id='ep-review-mnemonic-label'>Mnemonic:</span>
+                        <div id='ep-review-mnemonic'></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -78,6 +84,7 @@ const practiceBtnRadicalStyling = {
   "border-radius": "3px",
   color: "white",
   "font-weight": "500",
+  cursor: "pointer"
 };
 
 const practiceBtnKanjiStyling = {
@@ -87,6 +94,7 @@ const practiceBtnKanjiStyling = {
   "border-radius": "3px",
   color: "white",
   "font-weight": "500",
+  cursor: "pointer"
 };
 
 // Radical/Kanji Selection Modal Styling
@@ -322,13 +330,39 @@ const reviewModalStyling = {
         fontSize: "1.125rem" 
     },
     meaningLabel: {
+        display: "inline-block",
+        fontWeight: "normal",
+        fontSize: "1.25rem",
+        color: "#1F2937",
+        marginRight: "0.5rem"
+    },
+    meaningText: {
+        display: "inline-block",
         fontWeight: "bold",
         fontSize: "1.25rem",
-        color: "#1F2937" 
+        color: "#1F2937"
+    },
+    mnemonicContainer: {
+        marginTop: "1rem",
+        textAlign: "left",
+        lineHeight: "1.6"
+    },
+    mnemonicLabel: {
+        display: "block",
+        fontWeight: "bold",
+        fontSize: "1.25rem",
+        color: "#1F2937",
+        marginBottom: "0.5rem"
     },
     mnemonic: {
-        fontStyle: "italic",
-        color: "#6B7280"
+        color: "#6B7280",
+        fontSize: "1.125rem"
+    },
+    mnemonicHighlight: {
+        backgroundColor: "#E5E7EB",
+        padding: "0 0.25rem",
+        borderRadius: "2px",
+        color: "#1F2937"
     }
 };
 
@@ -622,6 +656,7 @@ async function getCurrentLevelRadicals() {
                             character: radical.data.characters,
                             meaning: radical.data.meanings[0].meaning,
                             documentationUrl: radical.data.document_url,
+                            meaningMnemonic: radical.data.meaning_mnemonic,
                             svg: radical.data.character_images.find(img => 
                                 img.content_type === 'image/svg+xml'
                             )?.url || null
@@ -695,12 +730,13 @@ class ReviewSession {
 
     nextRadical() {
         if (this.remainingRadicals.length === 0) {
-            this.remainingRadicals = this.shuffleArray(
-                this.originalRadicals.filter(radical => 
-                    !this.correctAnswers.has(radical.id) &&
-                    (!this.currentRadical || radical.id !== this.currentRadical.id)
-                )
-            );
+            const remainingUnlearned = this.originalRadicals.filter(radical => !this.correctAnswers.has(radical.id));
+
+            if (remainingUnlearned.length === 1) {
+                this.remainingRadicals = remainingUnlearned;
+            } else {
+                this.remainingRadicals = this.shuffleArray(remainingUnlearned.filter(radical => !this.currentRadical || radical.id !== this.currentRadical.id));
+            }
         }
         this.currentRadical = this.remainingRadicals.shift();
     }
@@ -731,13 +767,20 @@ function startReviewSession(reviewSession) {
     $reviewBackdrop.appendTo('body');
     $reviewModal.find('#ep-review-modal-wrapper').css(reviewModalStyling.container);
 
+    $("#ep-review-answer").on("keypress", function(e) {
+        if (e.which === 13) {
+            handleSubmit();
+        }
+    });
+
     $("#ep-review-modal-header").css(reviewModalStyling.header);
     $("#ep-review-content").css(reviewModalStyling.content);
     $("#ep-review-character").css(reviewModalStyling.character);
     $("#ep-review-input-section").css(reviewModalStyling.inputSection);
     $("#ep-review-answer").css(reviewModalStyling.input);
     $("#ep-review-submit").css(reviewModalStyling.submitButton);
-    $("#ep-review-meaning").css(reviewModalStyling.meaningLabel);
+    $("#ep-review-meaning-label").css(reviewModalStyling.meaningLabel);
+    $("#ep-review-meaning").css(reviewModalStyling.meaningText);
     $("#ep-review-mnemonic").css(reviewModalStyling.mnemonic);
     $("#ep-review-result-message").css(reviewModalStyling.resultMessage);
     $("#ep-review-exit")
@@ -772,6 +815,40 @@ function startReviewSession(reviewSession) {
         $("#ep-review-explanation").hide();
         updateProgress();
     }
+
+    function resetUIForNextCard() {
+        $("#ep-review-input-section").show();
+        $("#ep-review-explanation").hide();
+        $("#ep-review-character").css('marginBottom', '2rem');
+        $("#ep-review-submit").show();
+        $("#ep-review-answer").prop('disabled', false);
+        $("#ep-review-result").hide();
+        $("#ep-review-result-message").hide();
+        $("#ep-review-modal-header").css(reviewModalStyling.header);
+        $("#ep-review-progress").css(reviewModalStyling.progress);
+    }
+
+    function showCompletionUI() {
+        const progress = reviewSession.getProgress();
+        $("#ep-review-progress-correct").text(progress.total);
+        $("#ep-review-result-message")
+            .text("Review completed!")
+            .css(reviewModalStyling.resultMessage)
+            .show();
+        $("#ep-review-character").hide();
+        $("#ep-review-input-section").hide();
+        $("#ep-review-explanation").hide();
+        $("<button>")
+            .text("Study Again?")
+            .css(reviewModalStyling.submitButton)
+            .on("click", function() {
+                enableScroll();
+                $reviewModal.remove();
+                $reviewBackdrop.remove();
+                handleRadiclePractice();
+            })
+            .appendTo("#ep-review-content");
+    }
     
     function updateProgress() {
         const progress = reviewSession.getProgress();
@@ -784,18 +861,40 @@ function startReviewSession(reviewSession) {
         const isCorrect = reviewSession.checkAnswer(userAnswer);
         
         if (isCorrect) {
-            $("#ep-review-result-message").text("Correct!");
+            $("#ep-review-result-message").text("Correct!").css(reviewModalStyling.correctMessage);
             $("#ep-review-show-hint").hide();
+            $("#ep-review-submit").hide();
+            $("#ep-review-answer").prop('disabled', true);
             
             if (reviewSession.isComplete()) {
+                const progress = reviewSession.getProgress();
+                $("#ep-review-progress-correct").text(progress.total);
+                $("#ep-review-character").hide();
                 $("#ep-review-result-message").text("Review completed!");
-                $("#ep-review-submit").prop("disabled", true);
+                $("#ep-review-input-section").hide();
+                $("<button>")
+                    .text("Study Again?")
+                    .css(reviewModalStyling.submitButton)
+                    .on("click", function() {
+                        enableScroll();
+                        $reviewModal.remove();
+                        $reviewBackdrop.remove();
+                        handleRadiclePractice();
+                    })
+                    .appendTo("#ep-review-content");
             } else {
-                reviewSession.nextRadical();
-                setTimeout(showCurrentRadical, 1000);
+                setTimeout(() => {
+                    reviewSession.nextRadical();
+                    showCurrentRadical();
+                    $("#ep-review-submit").show();
+                    $("#ep-review-answer").prop('disabled', false);
+                    $("ep-review-answer").prop('disabled', false);
+                }, 1000);
             }
         } else {
-            $("#ep-review-result-message").text("Incorrect. Please try again.");
+            $("#ep-review-result-message")
+                .text("Incorrect. Please try again.")
+                .css(reviewModalStyling.incorrectMessage);
             $("#ep-review-show-hint").show();
         }
         
@@ -804,9 +903,43 @@ function startReviewSession(reviewSession) {
     
     function showHint() {
         const currentRadical = reviewSession.currentRadical;
+        $("#ep-review-input-section").hide();
+        $("#ep-review-show-hint").hide();
+        $("#ep-review-result-message").hide();
+        $("#ep-review-character").css('marginBottom', '0');
+        $("#ep-review-result").hide();
         $("#ep-review-meaning").text(currentRadical.meaning);
-        $("#ep-review-mnemonic").text(currentRadical.meaningMnemonic);
+
+        // Remove the <mnemonic> text in our meaningMnemonic data
+        const mnemonicText = currentRadical.meaningMnemonic;
+        const processedMnemonicText = mnemonicText.replace(
+            /<radical>(.*?)<\/radical>/g, 
+            (match, content) => `<span class="mnemonic-highlight">${content}</span>`
+        );
+
+        // Apply mnemonic styling
+        $("#ep-review-mnemonic").html(processedMnemonicText);
+        $(".mnemonic-highlight").css(reviewModalStyling.mnemonicHighlight);
+        $(".mnemonic-container").css(reviewModalStyling.mnemonicContainer);
+        $("#ep-review-mnemonic-label").css(reviewModalStyling.mnemonicLabel);
+        $("#ep-review-mnemonic").css(reviewModalStyling.mnemonic);
+
         $("#ep-review-explanation").show();
+
+        $("<button>")
+            .text("Continue Review")
+            .css(reviewModalStyling.submitButton)
+            .on("click", function () {
+                $(this).remove();
+                if (reviewSession.isComplete()) {
+                    showCompletionUI();
+                } else {
+                    resetUIForNextCard();
+                    reviewSession.nextRadical();
+                    showCurrentRadical();
+                }
+            })
+            .appendTo("#ep-review-content");
     }
     
     $("#ep-review-submit").on("click", handleSubmit);
