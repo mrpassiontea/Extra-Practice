@@ -1,0 +1,24 @@
+{
+  "name": "wanikani-extra-practice",
+  "version": "1.0.0",
+  "description": "WaniKani Extra Practice UserScript",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "rollup -c",
+    "dev": "rollup -c -w",
+    "clean": "rm -rf dist/*"
+  },
+  "keywords": [
+    "wanikani",
+    "userscript",
+    "tampermonkey"
+  ],
+  "author": "mrpassiontea",
+  "license": "MIT",
+  "devDependencies": {
+    "@rollup/plugin-node-resolve": "^16.0.0",
+    "@rollup/plugin-replace": "^6.0.2",
+    "rollup": "^4.34.6"
+  }
+}
