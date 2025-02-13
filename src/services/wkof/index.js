@@ -1,4 +1,5 @@
 export {
     getCurrentUserLevel,
-    getCurrentLevelRadicals
+    getCurrentLevelRadicals,
+    getCurrentLevelKanji
 } from "./storage";

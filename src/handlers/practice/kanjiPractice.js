@@ -1,9 +1,78 @@
-// import { modalTemplate, reviewModalTemplate, styles } from "../../constants/index";
-// import { ReviewSession, disableScroll, enableScroll } from "./shared/index";
-// import { getCurrentLevelKanji } from "../../services/wkof/index"; // We'll need to create this service
+import { KanjiSelectionModal, EVENTS as SELECTION_EVENTS } from "../../components/modals/kanjiSelection/index";
+import { ReviewSessionModal, REVIEW_EVENTS } from "../../components/modals/reviewSession/index";
+import { disableScroll, enableScroll, ReviewSession } from "./shared/index";
+import { getCurrentLevelKanji } from "../../services/wkof/index";
+import { styles } from "../../constants";
 
 export async function handleKanjiPractice() {
-    // This will follow a similar structure to handleRadicalPractice
-    // but with kanji-specific modifications
-    console.log("Kanji practice handler - To be implemented");
+    try {
+        disableScroll();
+        const kanji = await getCurrentLevelKanji();
+        
+        const selectionModal = new KanjiSelectionModal(kanji)
+            .on(SELECTION_EVENTS.CLOSE, () => {
+                enableScroll();
+                selectionModal.remove();
+            })
+            .on(SELECTION_EVENTS.START_REVIEW, (selectedKanji) => {
+                selectionModal.remove();
+                startKanjiReview(selectedKanji);
+            });
+
+        await selectionModal.render();
+
+    } catch (error) {
+        console.error("Error in kanji practice:", error);
+        enableScroll();
+    }
+}
+
+async function startKanjiReview(selectedKanji) {
+    try {
+        const reviewSession = new ReviewSession(selectedKanji);
+        reviewSession.nextItem();
+
+        const reviewModal = new ReviewSessionModal(reviewSession);
+
+        reviewModal
+            .on(REVIEW_EVENTS.CLOSE, () => {
+                const progress = reviewSession.getProgress();
+                $("#ep-review-modal-header").remove();
+                $("#ep-review-content")
+                    .empty()
+                    .append($("<div>")
+                        .css(styles.reviewModal.content)
+                        .append([
+                            $("<p>", { 
+                                css: {
+                                    ...styles.reviewModal.progress,
+                                    marginBottom: 0
+                                },
+                                text: `${progress.current}/${progress.total} Correct (${progress.percentComplete}%)` 
+                            }), 
+                            $("<p>", {
+                                css: {
+                                    marginTop: 0,
+                                    textAlign: "center"
+                                },
+                                text: "Closing in 3 seconds..."
+                            })
+                        ]));
+
+                setTimeout(() => {
+                    enableScroll();
+                    reviewModal.remove();
+                }, 3000);
+            })
+            .on(REVIEW_EVENTS.STUDY_AGAIN, () => {
+                reviewModal.remove();
+                enableScroll();
+                handleKanjiPractice();
+            });
+
+        await reviewModal.render();
+    } catch (error) {
+        console.error("Error in startKanjiReview:", error);
+        enableScroll();
+    }
 }
