@@ -1,8 +1,9 @@
 import { KanjiSelectionModal, EVENTS as SELECTION_EVENTS } from "../../components/modals/kanjiSelection/index";
 import { ReviewSessionModal, REVIEW_EVENTS } from "../../components/modals/reviewSession/index";
-import { disableScroll, enableScroll, ReviewSession } from "./shared/index";
+import { disableScroll, enableScroll } from "./shared/modalHandler";
+import { KanjiReviewSession } from "./shared/index";
 import { getCurrentLevelKanji } from "../../services/wkof/index";
-import { styles } from "../../constants";
+import { styles } from "../../constants/index";
 
 export async function handleKanjiPractice() {
     try {
@@ -29,7 +30,7 @@ export async function handleKanjiPractice() {
 
 async function startKanjiReview(selectedKanji) {
     try {
-        const reviewSession = new ReviewSession(selectedKanji);
+        const reviewSession = new KanjiReviewSession(selectedKanji);
         reviewSession.nextItem();
 
         const reviewModal = new ReviewSessionModal(reviewSession);
@@ -40,24 +41,26 @@ async function startKanjiReview(selectedKanji) {
                 $("#ep-review-modal-header").remove();
                 $("#ep-review-content")
                     .empty()
-                    .append($("<div>")
-                        .css(styles.reviewModal.content)
-                        .append([
-                            $("<p>", { 
-                                css: {
-                                    ...styles.reviewModal.progress,
-                                    marginBottom: 0
-                                },
-                                text: `${progress.current}/${progress.total} Correct (${progress.percentComplete}%)` 
-                            }), 
-                            $("<p>", {
-                                css: {
-                                    marginTop: 0,
-                                    textAlign: "center"
-                                },
-                                text: "Closing in 3 seconds..."
-                            })
-                        ]));
+                    .append(
+                        $("<div>")
+                            .css(styles.reviewModal.content)
+                            .append([
+                                $("<p>", { 
+                                    css: {
+                                        ...styles.reviewModal.progress,
+                                        marginBottom: 0
+                                    },
+                                    text: `Meanings: ${progress.meaningProgress}/${progress.total/2} - Readings: ${progress.readingProgress}/${progress.total/2}`
+                                }), 
+                                $("<p>", {
+                                    css: {
+                                        marginTop: 0,
+                                        textAlign: "center"
+                                    },
+                                    text: "Closing in 3 seconds..."
+                                })
+                            ])
+                    );
 
                 setTimeout(() => {
                     enableScroll();

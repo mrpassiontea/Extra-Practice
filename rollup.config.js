@@ -15,7 +15,7 @@ const header = `// ==UserScript==
 // @grant        none
 // @grant        window.onurlchange
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js
-// @require      file://${process.cwd()}/dist/wanikani-extra-practice.user.js
+// @require      https://unpkg.com/wanakana@5.3.1/wanakana.min.js
 // @license      MIT; http://opensource.org/licenses/MIT
 // @run-at       document-end
 // ==/UserScript==

@@ -54,7 +54,7 @@ export const theme = {
         lg: "8px"
     },
     zIndex: {
-        modal: 1000
+        modal: 99999
     }
 };
 

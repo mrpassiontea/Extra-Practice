@@ -1,6 +1,6 @@
 import { reviewModalTemplate, styles, theme } from "../../../constants/index";
 import { REVIEW_STATES, REVIEW_EVENTS } from "./types";
-import ReviewCard from "./reviewCard";
+import { ReviewCard } from "./reviewCard";
 
 export class ReviewSessionModal {
     constructor(reviewSession) {
@@ -9,11 +9,31 @@ export class ReviewSessionModal {
         this.$modal = null;
         this.currentCard = null;
         this.callbacks = new Map();
+        this.isKanjiSession = !!this.reviewSession.correctMeanings; // Check if it's a kanji session
 
         // Bind methods
         this.handleAnswer = this.handleAnswer.bind(this);
         this.handleNextItem = this.handleNextItem.bind(this);
         this.showHint = this.showHint.bind(this);
+        this.setupInput = this.setupInput.bind(this);
+    }
+
+    setupInput() {
+        const input = document.querySelector("#ep-review-answer");
+        if (!input) return;
+
+        const currentItem = this.reviewSession.currentItem;
+        if (!currentItem) return;
+
+        if (this.isKanjiSession && currentItem.type === "reading") {
+            wanakana.bind(input, {
+                IMEMode: "toHiragana",
+                useObsoleteKana: false,
+                passRomaji: false,
+                upcaseKatakana: false,
+                convertLongVowelMark: true
+            });
+        }
     }
 
     on(event, callback) {
@@ -28,8 +48,18 @@ export class ReviewSessionModal {
 
     updateProgress() {
         const progress = this.reviewSession.getProgress();
-        $("#ep-review-progress-correct").text(progress.current);
-        $("#ep-review-progress-total").text(progress.total);
+        
+        if (this.isKanjiSession) {
+            $("#ep-review-progress-correct").html(
+                `Meanings: ${progress.meaningProgress}/${progress.total/2} | ` +
+                `Readings: ${progress.readingProgress}/${progress.total/2}`
+            );
+        } else {
+            // Radical session
+            $("#ep-review-progress-correct").text(
+                `${progress.current}/${progress.total}`
+            );
+        }
     }
 
     showReviewInterface() {
@@ -50,6 +80,8 @@ export class ReviewSessionModal {
         $("#ep-review-answer").val("").prop("disabled", false);
         $("#ep-review-submit").show();
         $("#ep-review-answer").focus();
+
+        this.setupInput();
     }
 
     hideInputInterface() {
@@ -73,34 +105,35 @@ export class ReviewSessionModal {
         
         $("#ep-review-content").empty().append($card);
         this.showInputInterface();
+
+        this.setupInput();
     }
 
     async handleAnswer() {
         const userAnswer = $("#ep-review-answer").val()?.trim();
         if (!userAnswer) return;
 
-        // Found in reviewSession.js
         const isCorrect = this.reviewSession.checkAnswer(userAnswer);
         
         $(".ep-review-input-section").hide();
+        $(".ep-review-question").hide();
 
-        $('.ep-review-character').css({
-            marginBottom: '0'
-        })
+        $(".ep-review-character").css({
+            marginBottom: "0"
+        });
 
         if (isCorrect) {
-            // Show correct message, does this even append to anything? Does #ep-review-result exist?
-            $('.ep-review-card')
+            $(".ep-review-card")
                 .append(
-                    $('<div>')
-                        .attr('id', 'ep-review-result-container')
+                    $("<div>")
+                        .attr("id", "ep-review-result-container")
                         .css({
                             ...styles.reviewModal.content,
                             padding: 0
                         })
-                        .append($('<div>')
-                        .attr('id', 'ep-review-result-message')
-                        .text('Correct!')
+                        .append($("<div>")
+                            .attr("id", "ep-review-result-message")
+                            .text("Correct!")
                             .css({
                                 ...styles.reviewModal.results.message,
                                 color: theme.colors.success,
@@ -108,46 +141,45 @@ export class ReviewSessionModal {
                 );
                 
             this.updateProgress();
-            setTimeout(() => this.handleNextItem(), 1500);
+            setTimeout(() => this.handleNextItem(), 1000);
         } else {
-            // Show incorrect message with options
-            $('.ep-review-card')
+            $(".ep-review-card")
                 .append(
-                    $('<div>')
-                        .attr('id', 'ep-review-result-container')
+                    $("<div>")
+                        .attr("id", "ep-review-result-container")
                         .css({
                             ...styles.reviewModal.content,
                             padding: 0
                         })
                         .append(
-                            $('<div>')
-                                .attr('id', 'ep-review-result-message')
-                                .text('Incorrect')
+                            $("<div>")
+                                .attr("id", "ep-review-result-message")
+                                .text("Incorrect")
                                 .css({
                                     ...styles.reviewModal.results.message,
                                     color: theme.colors.error,
                                 }),
-                            $('<div>')
-                                .addClass('ep-review-buttons')
+                            $("<div>")
+                                .addClass("ep-review-buttons")
                                 .css({ 
-                                    display: 'flex',
+                                    display: "flex",
                                     gap: theme.spacing.md,
-                                    justifyContent: 'center' 
+                                    justifyContent: "center" 
                                 })
                                 .append(
-                                    $('<button>')
-                                        .attr('id', 'ep-review-show-hint')
-                                        .text('Show Answer')
+                                    $("<button>")
+                                        .attr("id", "ep-review-show-hint")
+                                        .text("Show Answer")
                                         .css({
                                             ...styles.reviewModal.buttons.hint,
-                                            minWidth: '120px'
+                                            minWidth: "120px"
                                         }),
-                                    $('<button>')
-                                        .attr('id', 'ep-review-continue')
-                                        .text('Continue Review')
+                                    $("<button>")
+                                        .attr("id", "ep-review-continue")
+                                        .text("Continue Review")
                                         .css({
                                             ...styles.reviewModal.buttons.submit,
-                                            minWidth: '120px'
+                                            minWidth: "120px"
                                         })
                                 )
                         )
@@ -159,7 +191,6 @@ export class ReviewSessionModal {
 
     async showHint() {
         $("#ep-review-result").remove();
-
         await this.currentCard.updateState(REVIEW_STATES.REVIEWING);
     }
 
@@ -177,17 +208,44 @@ export class ReviewSessionModal {
     showCompletionScreen() {
         const progress = this.reviewSession.getProgress();
         
-        const languageLearningQuotes = [
-            "Language is effort",
-            "One character a day",
-            "Continuation is power",
-            "Learn by doing",
-            "Little by little, steadily"
-        ];
+        let languageLearningQuotes;
+
+        if (this.isKanjiSession) {
+            languageLearningQuotes = [
+                "Every kanji you learn unlocks new understanding",
+                "One character a day",
+                "Continuation is power",
+                "Each review strengthens your kanji recognition",
+                "Little by little, steadily",
+                "Each character you master opens new doors to understanding",
+                "Your journey through the world of kanji grows stronger each day"
+            ]; 
+        } else {
+            languageLearningQuotes = [
+                "Every radical mastered unlocks new understanding",
+                "Building your foundation, one radical at a time",
+                "Mastering radicals today, recognizing kanji tomorrow",
+                "Each radical review strengthens your foundation",
+                "Little by little, your radical knowledge grows",
+                "Each radical you master opens new paths of understanding",
+                "Your journey through radicals grows stronger each day",
+                "Steady progress in radicals paves the way forward",
+                "Your radical knowledge builds the bridge to comprehension"
+            ];
+        }
         
         const randomQuote = languageLearningQuotes[
             Math.floor(Math.random() * languageLearningQuotes.length)
         ];
+
+        let completionMessage;
+        if (this.isKanjiSession) {
+            completionMessage = `Review completed!<br>` +
+                `Meanings: ${progress.meaningProgress}/${progress.total/2} | ` +
+                `Readings: ${progress.readingProgress}/${progress.total/2}`;
+        } else {
+            completionMessage = `Review completed! ${progress.current}/${progress.total} Correct (${progress.percentComplete}%)`;
+        }
 
         const $completionContent = $("<div>")
             .css({
@@ -196,7 +254,7 @@ export class ReviewSessionModal {
             })
             .append(
                 $("<h1>")
-                    .text(`Review completed! ${progress.current}/${progress.total} Correct (${progress.percentComplete}%)`)
+                    .html(completionMessage)
                     .css({
                         ...styles.reviewModal.progress,
                         marginBottom: theme.spacing.lg
@@ -213,7 +271,6 @@ export class ReviewSessionModal {
                     .css(styles.reviewModal.buttons.submit)
                     .on("click", () => {
                         this.emit(REVIEW_EVENTS.STUDY_AGAIN);
-                        // The radical practice handler will handle reopening the selection modal
                     })
             );
 
@@ -254,7 +311,6 @@ export class ReviewSessionModal {
             .on("click", "#ep-review-continue", this.handleNextItem);
 
         $("#ep-review-exit").on("click", () => {
-            // Need to look into the .on(REVIEW_EVENTS.CLOSE) and see if it implements the  exit modal with the progress, etc...
             this.emit(REVIEW_EVENTS.CLOSE);
         });
 
@@ -268,11 +324,15 @@ export class ReviewSessionModal {
         if (this.currentCard) {
             this.currentCard.remove();
         }
+
+        const input = document.querySelector("#ep-review-answer");
+        if (input) {
+            wanakana.unbind(input);
+        }
+
         if (this.$modal) {
             this.$modal.remove();
             this.$modal = null;
         }
     }
 }
-
-export default ReviewSessionModal;

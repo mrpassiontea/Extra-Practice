@@ -139,7 +139,10 @@ export async function getCurrentLevelKanji() {
                         documentUrl: kanji.data.document_url,
                         radicals: kanji.data.component_subject_ids
                             .map(getRadicalInfo)
-                            .filter(Boolean)
+                            .filter(Boolean),
+                        auxiliaryMeanings: kanji.data.auxiliary_meanings
+                            ?.filter(m => m.type === "whitelist")
+                            ?? []
                     }));
                 
                 resolve(currentLevelKanji);

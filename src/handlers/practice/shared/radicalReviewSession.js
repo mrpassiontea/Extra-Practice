@@ -1,17 +1,10 @@
-export default class ReviewSession {
-    constructor(selectedItems) {
-        this.originalItems = selectedItems;
-        this.remainingItems = this.shuffleArray([...selectedItems]);
-        this.currentItem = null;
-        this.correctAnswers = new Set();
-    }
+import BaseReviewSession from "./baseReviewSession";
 
-    shuffleArray(array) {
-        for (let i = array.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [array[i], array[j]] = [array[j], array[i]];
-        }
-        return array;
+class RadicalReviewSession extends BaseReviewSession {
+    constructor(selectedItems) {
+        super(selectedItems);
+        this.remainingItems = this.shuffleArray([...selectedItems]);
+        this.correctAnswers = new Set();
     }
 
     nextItem() {
@@ -35,7 +28,6 @@ export default class ReviewSession {
         if (isCorrect) {
             this.correctAnswers.add(this.currentItem.id);
         }
-
         return isCorrect;
     }
 
@@ -52,3 +44,5 @@ export default class ReviewSession {
         };
     }
 }
+
+export default RadicalReviewSession;
