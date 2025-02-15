@@ -1,22 +1,25 @@
-# WaniKani Extra Practice
+# Extra Practice
 
 ## Overview
 
-WaniKani Extra Practice is a powerful userscript that allows you to create custom practice sessions for radicals and kanji at your current WaniKani level. I found myself wanting to specifically study the radicals and kanji at my current level but didn't find anything that met my needs. This tool helps you reinforce your learning by providing focused, flexible review opportunities.
+Extra Practice is a powerful userscript that allows you to create custom practice sessions for radicals and kanji at your current WaniKani level. I wanted to study the radicals and kanji at my current level but couldn't find anything that met my needs. This tool helps you reinforce your learning by providing focused, flexible review opportunities.
 
 ## Features
 
 - Practice Radicals and Kanji from your current level
 - Randomized review order
 - Custom selection of items to review
+- English -> Kanji Practice Mode
+- Standard + English -> Kanji Combined Practice Mode
 - Hint and explanation system
 
 ## Installation
 
 ### Prerequisites
 
-- WaniKani
+- WaniKani Account
 - Tampermonkey or Greasemonkey browser extension
+- [WaniKani Open Framework](https://community.wanikani.com/t/installing-wanikani-open-framework/28549)
 
 ### Steps
 
@@ -34,13 +37,8 @@ WaniKani Extra Practice is a powerful userscript that allows you to create custo
 
 1. Look for new "Practice" buttons next to Radicals and Kanji sections
 2. Click "Practice" to start a custom review session
-3. Select the specific Radicals/Kanji you want to practice
+3. Select the specific Mode and Radicals/Kanji you want to practice
 4. Begin your review!
-
-## Requirements
-
-- jQuery 3.7.1 (included in script)
-- WaniKani Open Framework (WKOF)
 
 ## Contributing
 
