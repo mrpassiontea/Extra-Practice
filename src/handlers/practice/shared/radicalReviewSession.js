@@ -1,9 +1,9 @@
 import BaseReviewSession from "./baseReviewSession";
 
 class RadicalReviewSession extends BaseReviewSession {
-    constructor(selectedItems) {
-        super(selectedItems);
-        this.remainingItems = this.shuffleArray([...selectedItems]);
+    constructor(config) {
+        super(config.items);
+        this.remainingItems = this.shuffleArray([...config.items]);
         this.correctAnswers = new Set();
     }
 
@@ -36,11 +36,14 @@ class RadicalReviewSession extends BaseReviewSession {
     }
 
     getProgress() {
+        const totalRadicals = this.originalItems.length;
+        let current = this.correctAnswers.size;
+
         return {
-            current: this.correctAnswers.size,
-            total: this.originalItems.length,
-            remaining: this.originalItems.length - this.correctAnswers.size,
-            percentComplete: Math.round((this.correctAnswers.size / this.originalItems.length) * 100)
+            current,
+            total: totalRadicals,
+            remaining: totalRadicals - current,
+            percentComplete: Math.round((current / totalRadicals) * 100)
         };
     }
 }

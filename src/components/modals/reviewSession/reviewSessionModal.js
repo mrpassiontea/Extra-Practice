@@ -1,6 +1,10 @@
-import { reviewModalTemplate, styles, theme } from "../../../constants/index";
+import { reviewModalTemplate, styles, theme, PRACTICE_MODES } from "../../../constants/index";
 import { REVIEW_STATES, REVIEW_EVENTS } from "./types";
 import { ReviewCard } from "./reviewCard";
+import { KanjiReviewSession, RadicalReviewSession } from "../../../handlers/practice/shared/index";
+import { enableScroll } from "../../../handlers/practice/shared/modalHandler";
+import { handleKanjiPractice, handleRadicalPractice } from "../../../handlers/practice/index";
+
 
 export class ReviewSessionModal {
     constructor(reviewSession) {
@@ -9,15 +13,33 @@ export class ReviewSessionModal {
         this.$modal = null;
         this.currentCard = null;
         this.callbacks = new Map();
-        this.isKanjiSession = !!this.reviewSession.correctMeanings; // Check if it's a kanji session
+        this.isKanjiSession = !!this.reviewSession.correctMeanings;
 
-        // Bind methods
+        // Session configuration for Play Again
+        this.sessionConfig = {
+            mode: this.reviewSession.mode,
+            items: this.reviewSession.originalItems,
+        }
+
+        if (this.sessionConfig.mode !== "radical") {
+            this.sessionConfig.allUnlockedKanji = this.reviewSession.allUnlockedKanji;
+        }
+    
+        this.handlePlayAgain = this.handlePlayAgain.bind(this);
         this.handleAnswer = this.handleAnswer.bind(this);
         this.handleNextItem = this.handleNextItem.bind(this);
         this.showHint = this.showHint.bind(this);
         this.setupInput = this.setupInput.bind(this);
+        this.showCurrentItem = this.showCurrentItem.bind(this);
+        this.updateProgress = this.updateProgress.bind(this);
+        this.showReviewInterface = this.showReviewInterface.bind(this);
+        this.hideReviewInterface = this.hideReviewInterface.bind(this);
+        this.showInputInterface = this.showInputInterface.bind(this);
+        this.hideInputInterface = this.hideInputInterface.bind(this);
+        this.showCompletionScreen = this.showCompletionScreen.bind(this);
     }
 
+    // Setup Hiragana Keyboard
     setupInput() {
         const input = document.querySelector("#ep-review-answer");
         if (!input) return;
@@ -46,26 +68,78 @@ export class ReviewSessionModal {
         if (callback) callback(data);
     }
 
+    handlePlayAgain() {
+        const newSession = this.isKanjiSession ? new KanjiReviewSession({
+            items: this.sessionConfig.items,
+            mode: this.sessionConfig.mode,
+            allUnlockedKanji: this.sessionConfig.allUnlockedKanji
+        }) : new RadicalReviewSession({
+            items: this.sessionConfig.items,
+            mode: "radical",
+        });
+
+        // Initialize new session
+        newSession.nextItem();
+
+        // Clean up current modal
+        this.remove();
+
+        const newModal = new ReviewSessionModal(newSession);
+        newModal
+            .on(REVIEW_EVENTS.CLOSE, () => {
+                enableScroll();
+                newModal.remove();
+            })
+            .on(REVIEW_EVENTS.STUDY_AGAIN, () => {
+                newModal.remove();
+                enableScroll();
+                if (this.isKanjiSession) {
+                    handleKanjiPractice();
+                } else {
+                    handleRadicalPractice();
+                }
+            });
+        
+            return newModal.render();
+    }
+
     updateProgress() {
         const progress = this.reviewSession.getProgress();
-        
-        if (this.isKanjiSession) {
-            $("#ep-review-progress-correct").html(
-                `Meanings: ${progress.meaningProgress}/${progress.total/2} | ` +
-                `Readings: ${progress.readingProgress}/${progress.total/2}`
-            );
-        } else {
-            // Radical session
-            $("#ep-review-progress-correct").text(
-                `${progress.current}/${progress.total}`
-            );
+        const mode = this.reviewSession.mode;
+        let progressText;
+
+        switch (mode) {
+            case PRACTICE_MODES.ENGLISH_TO_KANJI:
+                progressText = `${progress.recognitionProgress}/${progress.total} Correct`;
+                break;
+            case PRACTICE_MODES.COMBINED:
+                progressText = `Meanings: ${progress.meaningProgress}/${progress.total/3} | ` +
+                             `Readings: ${progress.readingProgress}/${progress.total/3} | ` +
+                             `Recognition: ${progress.recognitionProgress}/${progress.total/3}`;
+                break;
+            case PRACTICE_MODES.STANDARD:
+                progressText = `Meanings: ${progress.meaningProgress}/${progress.total/2} | ` +
+                             `Readings: ${progress.readingProgress}/${progress.total/2}`;
+                break;
+            default: // RADICAL 
+                progressText = `${progress.current}/${progress.total/1} Correct`;
         }
+
+        $("#ep-review-progress-correct").html(progressText);
+
+        if (mode === PRACTICE_MODES.COMBINED) {
+            $("#ep-review-progress-correct").css({
+                fontSize: theme.typography.fontSize.xs
+            });
+        }
+        
     }
 
     showReviewInterface() {
         $("#ep-review-result").show();
         $("#ep-review-result-message").show();
         $("#ep-review-explanation").show();
+        $(".ep-review-buttons").hide();
     }
 
     hideReviewInterface() {
@@ -73,6 +147,7 @@ export class ReviewSessionModal {
         $("#ep-review-result-message").hide();
         $("#ep-review-explanation").hide();
         $("#ep-review-show-hint").hide();
+        $(".ep-review-buttons").show();
     }
 
     showInputInterface() {
@@ -96,101 +171,106 @@ export class ReviewSessionModal {
         if (this.currentCard) {
             this.currentCard.remove();
         }
-
+    
         this.state = REVIEW_STATES.ANSWERING;
         this.hideReviewInterface();
         
         this.currentCard = new ReviewCard(currentItem, REVIEW_STATES.ANSWERING);
         const $card = await this.currentCard.render();
         
+        // Clear and append the new card
         $("#ep-review-content").empty().append($card);
-        this.showInputInterface();
-
-        this.setupInput();
+        
+        // Ensure input is focused after rendering
+        if (currentItem.type !== "recognition") {
+            const $input = $("#ep-review-answer");
+            if ($input.length) {
+                $input.focus();
+                this.setupInput();
+            }
+        }
     }
 
     async handleAnswer() {
-        const userAnswer = $("#ep-review-answer").val()?.trim();
+        const currentCard = this.currentCard;
+        if (!currentCard) return;
+    
+        const userAnswer = currentCard.getAnswer();
         if (!userAnswer) return;
-
+    
         const isCorrect = this.reviewSession.checkAnswer(userAnswer);
         
-        $(".ep-review-input-section").hide();
-        $(".ep-review-question").hide();
-
+        $(".ep-review-input-section, .ep-review-question, .ep-review-content, .kanji-option, #ep-review-submit").hide();
         $(".ep-review-character").css({
             marginBottom: "0"
         });
-
+    
+        // Create result container if it doesn't exist
+        if ($("#ep-review-result-container").length === 0) {
+            $(".ep-review-card").append(
+                $("<div>")
+                    .attr("id", "ep-review-result-container")
+                    .css({
+                        ...styles.reviewModal.content,
+                        padding: 0
+                    })
+            );
+        }
+    
         if (isCorrect) {
-            $(".ep-review-card")
+            $("#ep-review-result-container")
+                .empty()
                 .append(
                     $("<div>")
-                        .attr("id", "ep-review-result-container")
+                        .attr("id", "ep-review-result-message")
+                        .text("Correct!")
                         .css({
-                            ...styles.reviewModal.content,
-                            padding: 0
+                            ...styles.reviewModal.results.message,
+                            color: theme.colors.success,
                         })
-                        .append($("<div>")
-                            .attr("id", "ep-review-result-message")
-                            .text("Correct!")
-                            .css({
-                                ...styles.reviewModal.results.message,
-                                color: theme.colors.success,
-                            }))
                 );
                 
             this.updateProgress();
             setTimeout(() => this.handleNextItem(), 1000);
         } else {
-            $(".ep-review-card")
+            $("#ep-review-result-container")
+                .empty()
                 .append(
                     $("<div>")
-                        .attr("id", "ep-review-result-container")
+                        .attr("id", "ep-review-result-message")
+                        .text("Incorrect")
                         .css({
-                            ...styles.reviewModal.content,
-                            padding: 0
+                            ...styles.reviewModal.results.message,
+                            color: theme.colors.error,
+                        }),
+                    $("<div>")
+                        .addClass("ep-review-buttons")
+                        .css({ 
+                            display: "flex",
+                            gap: theme.spacing.md,
+                            justifyContent: "center" 
                         })
                         .append(
-                            $("<div>")
-                                .attr("id", "ep-review-result-message")
-                                .text("Incorrect")
+                            $("<button>")
+                                .attr("id", "ep-review-show-hint")
+                                .text("Show Answer")
                                 .css({
-                                    ...styles.reviewModal.results.message,
-                                    color: theme.colors.error,
+                                    ...styles.reviewModal.buttons.hint,
+                                    minWidth: "120px"
                                 }),
-                            $("<div>")
-                                .addClass("ep-review-buttons")
-                                .css({ 
-                                    display: "flex",
-                                    gap: theme.spacing.md,
-                                    justifyContent: "center" 
+                            $("<button>")
+                                .attr("id", "ep-review-continue")
+                                .text("Continue Review")
+                                .css({
+                                    ...styles.reviewModal.buttons.submit,
+                                    minWidth: "120px"
                                 })
-                                .append(
-                                    $("<button>")
-                                        .attr("id", "ep-review-show-hint")
-                                        .text("Show Answer")
-                                        .css({
-                                            ...styles.reviewModal.buttons.hint,
-                                            minWidth: "120px"
-                                        }),
-                                    $("<button>")
-                                        .attr("id", "ep-review-continue")
-                                        .text("Continue Review")
-                                        .css({
-                                            ...styles.reviewModal.buttons.submit,
-                                            minWidth: "120px"
-                                        })
-                                )
                         )
                 );
         }
-
-        this.emit(REVIEW_EVENTS.ANSWER_SUBMITTED, { isCorrect, answer: userAnswer });
     }
 
     async showHint() {
-        $("#ep-review-result").remove();
         await this.currentCard.updateState(REVIEW_STATES.REVIEWING);
     }
 
@@ -207,6 +287,7 @@ export class ReviewSessionModal {
 
     showCompletionScreen() {
         const progress = this.reviewSession.getProgress();
+        const mode = this.reviewSession.mode;
         
         let languageLearningQuotes;
 
@@ -239,12 +320,24 @@ export class ReviewSessionModal {
         ];
 
         let completionMessage;
-        if (this.isKanjiSession) {
-            completionMessage = `Review completed!<br>` +
-                `Meanings: ${progress.meaningProgress}/${progress.total/2} | ` +
-                `Readings: ${progress.readingProgress}/${progress.total/2}`;
-        } else {
-            completionMessage = `Review completed! ${progress.current}/${progress.total} Correct (${progress.percentComplete}%)`;
+        switch (mode) {
+            case PRACTICE_MODES.ENGLISH_TO_KANJI:
+                completionMessage = `Review completed!<br>${progress.recognitionProgress}/${progress.total} Correct`;
+                break;
+            case PRACTICE_MODES.COMBINED:
+                completionMessage = `Review completed!<br>` +
+                    `Meanings: ${progress.meaningProgress}/${progress.total/3} | ` +
+                    `Readings: ${progress.readingProgress}/${progress.total/3} | ` +
+                    `Recognition: ${progress.recognitionProgress}/${progress.total/3}`;
+                break;
+            case PRACTICE_MODES.STANDARD:
+                completionMessage = `Review completed!<br>` +
+                    `Meanings: ${progress.meaningProgress}/${progress.total/2} | ` +
+                    `Readings: ${progress.readingProgress}/${progress.total/2}`;
+                break;
+            default:
+                completionMessage = `Review completed!`;
+                
         }
 
         const $completionContent = $("<div>")
@@ -266,12 +359,31 @@ export class ReviewSessionModal {
                         marginBottom: theme.spacing.xl,
                         fontStyle: "italic"
                     }),
-                $("<button>")
-                    .text("Study Again?")
-                    .css(styles.reviewModal.buttons.submit)
-                    .on("click", () => {
-                        this.emit(REVIEW_EVENTS.STUDY_AGAIN);
+                    $("<div>")
+                    .css({
+                        display: "flex",
+                        gap: theme.spacing.md,
+                        justifyContent: "center"
                     })
+                    .append(
+                        $("<button>")
+                            .text("Play Again")
+                            .css({
+                                ...styles.reviewModal.buttons.submit,
+                                backgroundColor: theme.colors.success,
+                                minWidth: "120px"
+                            })
+                            .on("click", this.handlePlayAgain),
+                        $("<button>")
+                            .text("Study Different Items")
+                            .css({
+                                ...styles.reviewModal.buttons.submit,
+                                minWidth: "120px"
+                            })
+                            .on("click", () => {
+                                this.emit(REVIEW_EVENTS.STUDY_AGAIN);
+                            })
+                    )
             );
 
         $("#ep-review-content").empty().append($completionContent);

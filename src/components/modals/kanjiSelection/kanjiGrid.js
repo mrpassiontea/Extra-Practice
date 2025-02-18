@@ -57,56 +57,6 @@ class KanjiGrid {
         );
     }
 
-    createKanjiPreview(kanji) {
-        return $("<div>")
-            .addClass("kanji-preview")
-            .css({
-                display: "none",
-                position: "absolute",
-                top: "100%",
-                left: "50%",
-                transform: "translateX(-50%)",
-                backgroundColor: theme.colors.gray[800],
-                padding: theme.spacing.md,
-                borderRadius: theme.borderRadius.md,
-                zIndex: theme.zIndex.modal + 1,
-                minWidth: "200px",
-                boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
-                color: theme.colors.white
-            })
-            .append(
-                $("<div>")
-                    .addClass("kanji-meanings")
-                    .css({
-                        marginBottom: theme.spacing.sm,
-                        fontWeight: theme.typography.fontWeight.bold
-                    })
-                    .text(kanji.meanings.map(m => m.meaning).join(", ")),
-                $("<div>")
-                    .addClass("kanji-readings")
-                    .css({
-                        fontSize: theme.typography.fontSize.sm,
-                        color: theme.colors.gray[300]
-                    })
-                    .text(kanji.readings.map(r => r.reading).join(", ")),
-                $("<div>")
-                    .addClass("kanji-radicals")
-                    .css({
-                        marginTop: theme.spacing.sm,
-                        borderTop: `1px solid ${theme.colors.gray[600]}`,
-                        paddingTop: theme.spacing.sm,
-                        fontSize: theme.typography.fontSize.xs
-                    })
-                    .append(
-                        $("<span>")
-                            .text("Radicals: ")
-                            .css({ color: theme.colors.gray[400] }),
-                        $("<span>")
-                            .text(kanji.radicals.map(r => r.meaning).join(", "))
-                    )
-            );
-    }
-
     createKanjiElement(kanji) {
         const $element = $("<div>")
             .addClass("kanji-selection-item")
@@ -125,19 +75,10 @@ class KanjiGrid {
                     .text(kanji.character)
             );
 
-        const $preview = this.createKanjiPreview(kanji);
-        $element.append($preview);
-
         $element
             .on("click", () => {
                 const isCurrentlySelected = this.selectedKanji.has(kanji.id);
                 this.updateKanjiSelection($element, kanji, !isCurrentlySelected);
-            })
-            .on("mouseenter", () => {
-                $preview.show();
-            })
-            .on("mouseleave", () => {
-                $preview.hide();
             });
 
         return $element;

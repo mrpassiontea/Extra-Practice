@@ -201,6 +201,31 @@ export const styles = {
             }
         },
         buttons: {
+            start: {
+                base: {
+                    padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
+                    borderRadius: theme.borderRadius.md,
+                    border: "none",
+                    fontWeight: theme.typography.fontWeight.medium,
+                    transition: "all 0.2s ease",
+                    cursor: "pointer",
+                    color: theme.colors.white
+                },
+                radical: {
+                    backgroundColor: theme.colors.radical,
+                    '&:hover': {
+                        backgroundColor: theme.colors.radical,
+                        opacity: 0.9
+                    }
+                },
+                kanji: {
+                    backgroundColor: theme.colors.kanji,
+                    '&:hover': {
+                        backgroundColor: theme.colors.kanji,
+                        opacity: 0.9
+                    }
+                }
+            },
             selectAll: {
                 color: theme.colors.white,
                 background: "transparent",
@@ -211,24 +236,7 @@ export const styles = {
                 padding: theme.spacing.sm,
                 borderRadius: theme.borderRadius.sm,
                 fontWeight: theme.typography.fontWeight.bold,
-            },
-            start: {
-                base: {
-                    backgroundColor: theme.colors.radical,
-                    color: theme.colors.white,
-                    padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
-                    borderRadius: theme.borderRadius.md,
-                    border: "none",
-                    fontWeight: theme.typography.fontWeight.medium,
-                    cursor: "pointer",
-                    transition: "opacity 0.2s ease",
-                    opacity: "1"
-                },
-                disabled: {
-                    opacity: "0.5",
-                    cursor: "not-allowed",
-                    pointerEvents: "none"
-                }
+                transition: "all 0.2s ease"
             },
             exit: {
                 border: `1px solid ${theme.colors.white}`,
@@ -237,7 +245,8 @@ export const styles = {
                 color: theme.colors.black,
                 fontWeight: theme.typography.fontWeight.medium,
                 borderRadius: theme.borderRadius.sm,
-                cursor: "pointer"
+                cursor: "pointer",
+                transition: "all 0.2s ease"
             }
         },
         footer: {
@@ -247,6 +256,69 @@ export const styles = {
             width: "100%",
             maxWidth: "600px",
             gap: theme.spacing.md
+        },
+        modeSelector: {
+            container: {
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                marginBottom: theme.spacing.xl,
+                width: "100%",
+                maxWidth: "600px"
+            },
+            label: {
+                color: theme.colors.white,
+                fontSize: theme.typography.fontSize.md,
+                marginBottom: theme.spacing.md
+            },
+            options: {
+                display: "flex",
+                gap: theme.spacing.md,
+                justifyContent: "center",
+                width: "100%"
+            },
+            option: {
+                base: {
+                    padding: `${theme.spacing.sm} ${theme.spacing.md}`,
+                    borderRadius: theme.borderRadius.md,
+                    border: `2px solid ${theme.colors.gray[400]}`,
+                    backgroundColor: "transparent",
+                    color: theme.colors.white,
+                    cursor: "pointer",
+                    transition: "all 0.2s ease",
+                    fontSize: theme.typography.fontSize.sm,
+                    fontWeight: theme.typography.fontWeight.medium,
+                    '&:hover': {
+                        borderColor: theme.colors.kanji,
+                        backgroundColor: "rgba(235, 1, 156, 0.1)"
+                    }
+                },
+                selected: {
+                    borderColor: theme.colors.kanji,
+                    backgroundColor: "rgba(235, 1, 156, 0.2)"
+                }
+            }
+        },
+        kanjiOption: {
+            base: {
+                padding: theme.spacing.lg,
+                borderRadius: theme.borderRadius.md,
+                border: `2px solid ${theme.colors.gray[300]}`,
+                backgroundColor: theme.colors.white,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "all 0.2s ease",
+                cursor: "pointer",
+                '&:hover': {
+                    borderColor: theme.colors.kanji,
+                    backgroundColor: "rgba(235, 1, 156, 0.1)"
+                }
+            },
+            selected: {
+                borderColor: theme.colors.kanji,
+                backgroundColor: "rgba(235, 1, 156, 0.2)"
+            }
         }
     },
 
@@ -284,14 +356,14 @@ export const styles = {
             padding: theme.spacing.xl,
             display: "flex",
             flexDirection: "column",
-            alignItems: "center",
+            width: "100%",
             gap: theme.spacing.xl,
-            textAlign: "center"
         },
         character: {
             fontSize: theme.typography.fontSize["2xl"],
             color: theme.colors.gray[800],
-            marginBottom: theme.spacing.xl
+            marginBottom: theme.spacing.xl,
+            textAlign: "center"
         },
         inputSection: {
             width: "100%",
@@ -400,6 +472,26 @@ export const styles = {
                 padding: `0 ${theme.spacing.xs}`,
                 borderRadius: theme.borderRadius.sm,
                 color: theme.colors.gray[800]
+            }
+        },
+        kanjiOption: {
+            base: {
+                padding: theme.spacing.lg,
+                borderRadius: theme.borderRadius.md,
+                border: `2px solid ${theme.colors.gray[300]}`,
+                backgroundColor: theme.colors.white,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "all 0.2s ease",
+                '&:hover': {
+                    borderColor: theme.colors.kanji,
+                    backgroundColor: "rgba(235, 1, 156, 0.1)"
+                }
+            },
+            selected: {
+                borderColor: theme.colors.kanji,
+                backgroundColor: "rgba(235, 1, 156, 0.2)"
             }
         }
     }

@@ -30,7 +30,12 @@ export async function handleRadicalPractice() {
 
 async function startRadicalReview(selectedRadicals) {
     try {
-        const reviewSession = new RadicalReviewSession(selectedRadicals);
+        const session = {
+            items: selectedRadicals,
+            mode: "radical",
+        }
+
+        const reviewSession = new RadicalReviewSession(session);
         reviewSession.nextItem();
 
         const reviewModal = new ReviewSessionModal(reviewSession);
@@ -57,7 +62,7 @@ async function startRadicalReview(selectedRadicals) {
                                         marginTop: 0,
                                         textAlign: "center"
                                     },
-                                    text: "Closing in 3 seconds..."
+                                    text: "Closing..."
                                 })
                             ])
                     );
@@ -65,7 +70,7 @@ async function startRadicalReview(selectedRadicals) {
                 setTimeout(() => {
                     enableScroll();
                     reviewModal.remove();
-                }, 3000);
+                }, 1000);
             })
             .on(REVIEW_EVENTS.STUDY_AGAIN, () => {
                 reviewModal.remove();

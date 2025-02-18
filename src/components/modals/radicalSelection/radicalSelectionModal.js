@@ -43,8 +43,7 @@ class RadicalSelectionModal {
                 .text(`Start Review (${selectedCount} Selected)`)
                 .css({
                     ...styles.practiceModal.buttons.start.base,
-                    opacity: "1",
-                    pointerEvents: "inherit"
+                    ...styles.practiceModal.buttons.start.radical
                 });
         } else {
             startButton
@@ -52,6 +51,7 @@ class RadicalSelectionModal {
                 .text("Start Review (0 Selected)")
                 .css({
                     ...styles.practiceModal.buttons.start.base,
+                    ...styles.practiceModal.buttons.start.radical,
                     ...styles.practiceModal.buttons.start.disabled
                 });
         }
@@ -64,23 +64,23 @@ class RadicalSelectionModal {
     }
 
     async render() {
-        // Create and append modal
         this.$modal = $(modalTemplate).appendTo("body");
         
-        // Set username
         $("#username").text($("p.user-summary__username:first").text());
         
-        // Apply styles
         this.$modal.css(styles.practiceModal.backdrop);
         $("#ep-practice-modal-welcome").css(styles.practiceModal.welcomeText.container);
         $("#ep-practice-modal-welcome h1").css(styles.practiceModal.welcomeText.username);
         $("#ep-practice-modal-footer").css(styles.practiceModal.footer);
-        $("#ep-practice-modal-start").css(styles.practiceModal.buttons.start.base);
+        $("#ep-practice-modal-start").css({
+            ...styles.practiceModal.buttons.start.base,
+            ...styles.practiceModal.buttons.start.radical,
+            ...styles.practiceModal.buttons.start.disabled
+        });
         $("#ep-practice-modal-select-all").css(styles.practiceModal.buttons.selectAll);
         $("#ep-practice-modal-content").css(styles.practiceModal.contentWrapper);
         $("#ep-practice-modal-close").css(styles.practiceModal.buttons.exit);
 
-        // Initialize RadicalGrid
         this.radicalGrid = new RadicalGrid(
             this.radicals,
             this.handleSelectionChange.bind(this)
@@ -89,10 +89,8 @@ class RadicalSelectionModal {
         const $grid = await this.radicalGrid.render();
         $("#ep-practice-modal-grid").replaceWith($grid);
 
-        // Initialize buttons
         this.updateStartButton(0);
 
-        // Event handlers
         $("#ep-practice-modal-select-all").on("click", () => {
             const isSelectingAll = $("#ep-practice-modal-select-all").text() === "Select All";
             this.radicalGrid.toggleAllRadicals(isSelectingAll);

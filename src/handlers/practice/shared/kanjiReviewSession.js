@@ -1,35 +1,107 @@
 import BaseReviewSession from "./baseReviewSession";
+import { PRACTICE_MODES } from "../../../constants/index";
 
 class KanjiReviewSession extends BaseReviewSession {
-    constructor(selectedItems) {
-        super(selectedItems);
+    constructor(config) {
+        super(config.items);
+        this.mode = config.mode || PRACTICE_MODES.STANDARD;
+        this.allUnlockedKanji = config.allUnlockedKanji || [];
+        this.allCards = [];
+        this.remainingItems = [];
         
-        // Create all cards upfront
-        const allCards = [];
+        // Progress tracking
+        this.correctMeanings = new Set();
+        this.correctReadings = new Set();
+        this.correctRecognition = new Set();
         
-        selectedItems.forEach(kanji => {
+        // Initialize cards based on mode
+        this.initializeCards();
+    }
+
+    initializeCards() {
+        switch (this.mode) {
+            case PRACTICE_MODES.STANDARD:
+                this.initializeStandardCards();
+                break;
+            case PRACTICE_MODES.ENGLISH_TO_KANJI:
+                this.initializeRecognitionCards();
+                break;
+            case PRACTICE_MODES.COMBINED:
+                this.initializeStandardCards();
+                this.initializeRecognitionCards();
+                break;
+        }
+        
+        // Shuffle all cards together
+        this.remainingItems = this.shuffleArray([...this.allCards]);
+    }
+
+    initializeStandardCards() {
+        this.originalItems.forEach(kanji => {
             // Add meaning card
-            allCards.push({
+            this.allCards.push({
                 ...kanji,
                 type: "meaning",
                 questionType: "What is the meaning of this kanji?"
             });
             
             // Add reading card
-            allCards.push({
+            this.allCards.push({
                 ...kanji,
                 type: "reading",
                 questionType: "What is the reading of this kanji?"
             });
         });
+    }
 
-        // Shuffle all cards together
-        this.remainingItems = this.shuffleArray(allCards);
+    initializeRecognitionCards() {
+        this.originalItems.forEach(kanji => {
+            const primaryMeaning = kanji.meanings.find(m => m.primary)?.meaning;
+            
+            // Create recognition card
+            this.allCards.push({
+                ...kanji,
+                type: "recognition",
+                questionType: "Select the kanji that means",
+                meaningToMatch: primaryMeaning,
+                options: this.generateKanjiOptions(kanji)
+            });
+        });
+    }
+
+    generateKanjiOptions(correctKanji) {
+        const numberOfOptions = 4;
+        const options = [correctKanji];
         
-        // Progress tracking
-        this.correctMeanings = new Set();
-        this.correctReadings = new Set();
-        this.currentItem = null;
+        // Create a pool of incorrect options from the selected kanji
+        const availableOptions = this.originalItems.filter(k => k.id !== correctKanji.id);
+
+        
+        // Randomly select additional options from the available pool
+        while (options.length < numberOfOptions && availableOptions.length > 0) {
+            const randomIndex = Math.floor(Math.random() * availableOptions.length);
+            const selectedOption = availableOptions[randomIndex];
+            options.push(selectedOption);
+            availableOptions.splice(randomIndex, 1);
+        }
+
+        // If we still need more options (rare case when very few kanji are selected)
+        // fill remaining slots with kanji from allUnlockedKanji
+        if (options.length < numberOfOptions) {
+            const additionalOptions = this.allUnlockedKanji.filter(k => 
+                !options.some(selected => selected.id === k.id) && 
+                !this.originalItems.some(selected => selected.id === k.id)
+            );
+
+            while (options.length < numberOfOptions && additionalOptions.length > 0) {
+                const randomIndex = Math.floor(Math.random() * additionalOptions.length);
+                const selectedOption = additionalOptions[randomIndex];
+                options.push(selectedOption);
+                additionalOptions.splice(randomIndex, 1);
+            }
+        }
+        
+        return this.shuffleArray(options);
     }
 
     nextItem() {
@@ -38,36 +110,67 @@ class KanjiReviewSession extends BaseReviewSession {
             const remainingUnlearned = [];
             
             this.originalItems.forEach(kanji => {
-                // Check if meaning needs review
-                if (!this.correctMeanings.has(kanji.id)) {
-                    remainingUnlearned.push({
-                        ...kanji,
-                        type: "meaning",
-                        questionType: "What is the meaning of this kanji?"
-                    });
-                }
-                
-                // Check if reading needs review
-                if (!this.correctReadings.has(kanji.id)) {
-                    remainingUnlearned.push({
-                        ...kanji,
-                        type: "reading",
-                        questionType: "What is the reading of this kanji?"
-                    });
+                switch (this.mode) {
+                    case PRACTICE_MODES.STANDARD:
+                        if (!this.correctMeanings.has(kanji.id)) {
+                            remainingUnlearned.push({
+                                ...kanji,
+                                type: "meaning",
+                                questionType: "What is the meaning of this kanji?"
+                            });
+                        }
+                        if (!this.correctReadings.has(kanji.id)) {
+                            remainingUnlearned.push({
+                                ...kanji,
+                                type: "reading",
+                                questionType: "What is the reading of this kanji?"
+                            });
+                        }
+                        break;
+                    case PRACTICE_MODES.ENGLISH_TO_KANJI:
+                        if (!this.correctRecognition.has(kanji.id)) {
+                            const primaryMeaning = kanji.meanings.find(m => m.primary)?.meaning;
+                            remainingUnlearned.push({
+                                ...kanji,
+                                type: "recognition",
+                                questionType: "Select the kanji that means",
+                                meaningToMatch: primaryMeaning,
+                                options: this.generateKanjiOptions(kanji)
+                            });
+                        }
+                        break;
+                    case PRACTICE_MODES.COMBINED:
+                        if (!this.correctMeanings.has(kanji.id)) {
+                            remainingUnlearned.push({
+                                ...kanji,
+                                type: "meaning",
+                                questionType: "What is the meaning of this kanji?"
+                            });
+                        }
+                        if (!this.correctReadings.has(kanji.id)) {
+                            remainingUnlearned.push({
+                                ...kanji,
+                                type: "reading",
+                                questionType: "What is the reading of this kanji?"
+                            });
+                        }
+                        if (!this.correctRecognition.has(kanji.id)) {
+                            const primaryMeaning = kanji.meanings.find(m => m.primary)?.meaning;
+                            remainingUnlearned.push({
+                                ...kanji,
+                                type: "recognition",
+                                questionType: "Select the kanji that means",
+                                meaningToMatch: primaryMeaning,
+                                options: this.generateKanjiOptions(kanji)
+                            });
+                        }
+                        break;
                 }
             });
 
-            // Shuffle the remaining items, excluding the current one if it exists
-            if (remainingUnlearned.length > 1) {
-                this.remainingItems = this.shuffleArray(
-                    remainingUnlearned.filter(item => 
-                        !this.currentItem || 
-                        item.id !== this.currentItem.id || 
-                        item.type !== this.currentItem.type
-                    )
-                );
-            } else {
-                this.remainingItems = remainingUnlearned;
+            // Shuffle the remaining items
+            if (remainingUnlearned.length > 0) {
+                this.remainingItems = this.shuffleArray(remainingUnlearned);
             }
         }
 
@@ -79,57 +182,96 @@ class KanjiReviewSession extends BaseReviewSession {
         if (!this.currentItem) return false;
 
         let isCorrect = false;
-        const normalizedUserAnswer = userAnswer.toLowerCase().trim();
-        const userReading = userAnswer.trim();
 
-        if (this.currentItem.type === "meaning") {
-            // Check primary meanings
-            isCorrect = this.currentItem.meanings.some(m => 
-                m.meaning.toLowerCase() === normalizedUserAnswer
-            );
-
-            // Check auxiliary meanings if available
-            if (!isCorrect && this.currentItem.auxiliaryMeanings.length > 0) {
-                isCorrect = this.currentItem.auxiliaryMeanings.some(m => 
-                    m.meaning.toLowerCase() === normalizedUserAnswer
-                );
-            }
-
-            if (isCorrect) {
-                this.correctMeanings.add(this.currentItem.id);
-            }
-        } else {
-            // Reading type
-            isCorrect = this.currentItem.readings.some(r => 
-                r.reading === userReading
-            );
-
-            if (isCorrect) {
-                this.correctReadings.add(this.currentItem.id);
-            }
+        switch (this.currentItem.type) {
+            case "meaning":
+                isCorrect = this.checkMeaningAnswer(userAnswer);
+                if (isCorrect) this.correctMeanings.add(this.currentItem.id);
+                break;
+                
+            case "reading":
+                isCorrect = this.checkReadingAnswer(userAnswer);
+                if (isCorrect) this.correctReadings.add(this.currentItem.id);
+                break;
+                
+            case "recognition":
+                isCorrect = parseInt(userAnswer) === this.currentItem.id;
+                if (isCorrect) this.correctRecognition.add(this.currentItem.id);
+                break;
         }
 
         return isCorrect;
     }
 
+    checkMeaningAnswer(userAnswer) {
+        const normalizedUserAnswer = userAnswer.toLowerCase().trim();
+        
+        // Check primary meanings
+        const isPrimaryCorrect = this.currentItem.meanings.some(m => 
+            m.meaning.toLowerCase() === normalizedUserAnswer
+        );
+        
+        if (isPrimaryCorrect) return true;
+        
+        // Check auxiliary meanings
+        return this.currentItem.auxiliaryMeanings.some(m => 
+            m.meaning.toLowerCase() === normalizedUserAnswer
+        );
+    }
+
+    checkReadingAnswer(userAnswer) {
+        const userReading = userAnswer.trim();
+        return this.currentItem.readings.some(r => r.reading === userReading);
+    }
+
     isComplete() {
-        const meaningsCompleted = this.correctMeanings.size === this.originalItems.length;
-        const readingsCompleted = this.correctReadings.size === this.originalItems.length;
-        return meaningsCompleted && readingsCompleted;
+        const progress = this.getProgress();
+        return progress.current === progress.total;
     }
 
     getProgress() {
-        const totalItems = this.originalItems.length * 2; // Each kanji has meaning and reading
-        const totalCorrect = this.correctMeanings.size + this.correctReadings.size;
+        const totalKanji = this.originalItems.length;
+        let total, current;
 
-        return {
-            current: totalCorrect,
-            total: totalItems,
-            remaining: totalItems - totalCorrect,
-            percentComplete: Math.round((totalCorrect / totalItems) * 100),
-            meaningProgress: this.correctMeanings.size,
-            readingProgress: this.correctReadings.size
-        };
+        switch (this.mode) {
+            case PRACTICE_MODES.STANDARD:
+                total = totalKanji * 2; // One point each for meaning and reading
+                current = this.correctMeanings.size + this.correctReadings.size;
+                return {
+                    total,
+                    current,
+                    meaningProgress: this.correctMeanings.size,
+                    readingProgress: this.correctReadings.size
+                };
+
+            case PRACTICE_MODES.ENGLISH_TO_KANJI:
+                total = totalKanji; // One point for each recognition test
+                current = this.correctRecognition.size;
+                return {
+                    total,
+                    current,
+                    recognitionProgress: this.correctRecognition.size
+                };
+
+            case PRACTICE_MODES.COMBINED:
+                total = totalKanji * 3; // One point each for meaning, reading, and recognition
+                current = this.correctMeanings.size + 
+                         this.correctReadings.size + 
+                         this.correctRecognition.size;
+                return {
+                    total,
+                    current,
+                    meaningProgress: this.correctMeanings.size,
+                    readingProgress: this.correctReadings.size,
+                    recognitionProgress: this.correctRecognition.size
+                };
+
+            default:
+                return {
+                    total: 0,
+                    current: 0
+                };
+        }
     }
 }
 

@@ -20,7 +20,7 @@ export const reviewModalTemplate = `
         <div id="ep-review-modal-wrapper">
             <div id="ep-review-modal-header">
                 <div id="ep-review-progress">
-                    <span id="ep-review-progress-correct">0</span> Correct
+                    <span id="ep-review-progress-correct">0</span>
                 </div>
                 <button id="ep-review-exit">End Review</button>
             </div>
