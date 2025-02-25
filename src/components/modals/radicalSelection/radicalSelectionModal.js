@@ -1,11 +1,13 @@
-import { modalTemplate, styles, theme } from "../../../constants/index";
+import { modalTemplate, styles, theme, ENDLESS_MODES } from "../../../constants/index";
 import { MODAL_STATES, EVENTS } from "./types";
 import RadicalGrid from "./radicalGrid";
+import { EndlessToggle } from "../../buttons/endlessToggle";
 
 class RadicalSelectionModal {
     constructor(radicals) {
         this.radicals = radicals;
         this.state = MODAL_STATES.READY;
+        this.endlessMode = ENDLESS_MODES.DISABLED;
         this.totalRadicals = radicals.length;
         this.$modal = null;
         this.radicalGrid = null;
@@ -63,6 +65,13 @@ class RadicalSelectionModal {
         this.updateStartButton(selectedCount);
     }
 
+    createEndlessModeSelector() {
+        const endlessToggle = new EndlessToggle(false, (endlessMode) => {
+            this.endlessMode = endlessMode;
+        });
+        return endlessToggle.createToggleSwitch();
+    }
+
     async render() {
         this.$modal = $(modalTemplate).appendTo("body");
         
@@ -81,6 +90,9 @@ class RadicalSelectionModal {
         $("#ep-practice-modal-content").css(styles.practiceModal.contentWrapper);
         $("#ep-practice-modal-close").css(styles.practiceModal.buttons.exit);
 
+        const $endlessToggle = this.createEndlessModeSelector();
+        $endlessToggle.insertAfter("#ep-practice-modal-welcome");
+    
         this.radicalGrid = new RadicalGrid(
             this.radicals,
             this.handleSelectionChange.bind(this)
@@ -103,7 +115,10 @@ class RadicalSelectionModal {
         $("#ep-practice-modal-start").on("click", () => {
             const selectedRadicals = this.radicalGrid.getSelectedRadicals();
             if (selectedRadicals.length > 0) {
-                this.emit(EVENTS.START_REVIEW, selectedRadicals);
+                this.emit(EVENTS.START_REVIEW, {
+                    items: selectedRadicals,
+                    endlessMode: this.endlessMode
+                });
             }
         });
 

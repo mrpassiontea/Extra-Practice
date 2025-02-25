@@ -17,7 +17,7 @@ export async function handleKanjiPractice() {
             })
             .on(SELECTION_EVENTS.START_REVIEW, (data) => {
                 selectionModal.remove();
-                startKanjiReview(data.kanji, data.mode, data.allUnlockedKanji);
+                startKanjiReview(data.kanji, data.mode, data.allUnlockedKanji, data.endlessMode);
             });
 
         await selectionModal.render();
@@ -28,12 +28,13 @@ export async function handleKanjiPractice() {
     }
 }
 
-async function startKanjiReview(selectedKanji, mode, allUnlockedKanji) {
+async function startKanjiReview(selectedKanji, mode, allUnlockedKanji, endlessMode) {
     try {
         const reviewSession = new KanjiReviewSession({ 
             items: selectedKanji, 
             mode: mode,
-            allUnlockedKanji: allUnlockedKanji
+            allUnlockedKanji: allUnlockedKanji,
+            endlessMode: endlessMode
         });
         
         reviewSession.nextItem();

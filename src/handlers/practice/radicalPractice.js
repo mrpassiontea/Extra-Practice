@@ -15,9 +15,9 @@ export async function handleRadicalPractice() {
                 enableScroll();
                 selectionModal.remove();
             })
-            .on(SELECTION_EVENTS.START_REVIEW, (selectedRadicals) => {
+            .on(SELECTION_EVENTS.START_REVIEW, (data) => {
                 selectionModal.remove();
-                startRadicalReview(selectedRadicals);
+                startRadicalReview(data.items, data.endlessMode);
             });
 
         await selectionModal.render();
@@ -28,11 +28,12 @@ export async function handleRadicalPractice() {
     }
 }
 
-async function startRadicalReview(selectedRadicals) {
+async function startRadicalReview(selectedRadicals, endlessMode) {
     try {
         const session = {
             items: selectedRadicals,
             mode: "radical",
+            endlessMode: endlessMode
         }
 
         const reviewSession = new RadicalReviewSession(session);

@@ -1,4 +1,4 @@
-import { reviewModalTemplate, styles, theme, PRACTICE_MODES } from "../../../constants/index";
+import { reviewModalTemplate, styles, theme, PRACTICE_MODES, ENDLESS_MODES } from "../../../constants/index";
 import { REVIEW_STATES, REVIEW_EVENTS } from "./types";
 import { ReviewCard } from "./reviewCard";
 import { KanjiReviewSession, RadicalReviewSession } from "../../../handlers/practice/shared/index";
@@ -19,6 +19,7 @@ export class ReviewSessionModal {
         this.sessionConfig = {
             mode: this.reviewSession.mode,
             items: this.reviewSession.originalItems,
+            endlessMode: this.reviewSession.endlessMode
         }
 
         if (this.sessionConfig.mode !== "radical") {
@@ -106,6 +107,21 @@ export class ReviewSessionModal {
     updateProgress() {
         const progress = this.reviewSession.getProgress();
         const mode = this.reviewSession.mode;
+
+        if (this.reviewSession.endlessMode !== ENDLESS_MODES.DISABLED) {
+            const endlessType = this.reviewSession.endlessMode === ENDLESS_MODES.HARDCORE ? "Hardcore" : "Normal";
+            let progressText = `${endlessType} Endless | Current Streak: ${progress.currentStreak}`;
+            
+            if (progress.highScore > 0) {
+                progressText += ` | High Score: ${progress.highScore}`;
+            }
+            
+            $("#ep-review-progress-correct").html(progressText);
+            // Add a small indicator showing this is an endless session
+            $("#ep-review-exit").text("End Endless Session");
+            return;
+        }
+
         let progressText;
 
         switch (mode) {
@@ -233,12 +249,18 @@ export class ReviewSessionModal {
             this.updateProgress();
             setTimeout(() => this.handleNextItem(), 1000);
         } else {
+            let resultMessage = "Incorrect";
+
+            if (this.reviewSession.endlessMode === ENDLESS_MODES.HARDCORE) {
+                resultMessage = "Incorrect - Score Reset to 0!";
+            }
+
             $("#ep-review-result-container")
                 .empty()
                 .append(
                     $("<div>")
                         .attr("id", "ep-review-result-message")
-                        .text("Incorrect")
+                        .text(resultMessage)
                         .css({
                             ...styles.reviewModal.results.message,
                             color: theme.colors.error,
@@ -275,14 +297,13 @@ export class ReviewSessionModal {
     }
 
     async handleNextItem() {
-        if (this.reviewSession.isComplete()) {
+        if (!this.reviewSession.isComplete()) {
+            this.reviewSession.nextItem();
+            await this.showCurrentItem();
+            this.emit(REVIEW_EVENTS.NEXT_ITEM);
+        } else {
             this.showCompletionScreen();
-            return;
         }
-
-        this.reviewSession.nextItem();
-        await this.showCurrentItem();
-        this.emit(REVIEW_EVENTS.NEXT_ITEM);
     }
 
     showCompletionScreen() {
@@ -320,24 +341,30 @@ export class ReviewSessionModal {
         ];
 
         let completionMessage;
-        switch (mode) {
-            case PRACTICE_MODES.ENGLISH_TO_KANJI:
-                completionMessage = `Review completed!<br>${progress.recognitionProgress}/${progress.total} Correct`;
-                break;
-            case PRACTICE_MODES.COMBINED:
-                completionMessage = `Review completed!<br>` +
-                    `Meanings: ${progress.meaningProgress}/${progress.total/3} | ` +
-                    `Readings: ${progress.readingProgress}/${progress.total/3} | ` +
-                    `Recognition: ${progress.recognitionProgress}/${progress.total/3}`;
-                break;
-            case PRACTICE_MODES.STANDARD:
-                completionMessage = `Review completed!<br>` +
-                    `Meanings: ${progress.meaningProgress}/${progress.total/2} | ` +
-                    `Readings: ${progress.readingProgress}/${progress.total/2}`;
-                break;
-            default:
-                completionMessage = `Review completed!`;
-                
+
+        if (this.reviewSession.endlessMode !== ENDLESS_MODES.DISABLED) {
+            const endlessType = this.reviewSession.endlessMode === ENDLESS_MODES.HARDCORE ? "Hardcore" : "Normal";
+            completionMessage = `${endlessType} Endless Session Completed!<br>` +
+                `Final Streak: ${progress.currentStreak} | High Score: ${progress.highScore}`;
+        } else {
+            switch (mode) {
+                case PRACTICE_MODES.ENGLISH_TO_KANJI:
+                    completionMessage = `Review completed!<br>${progress.recognitionProgress}/${progress.total} Correct`;
+                    break;
+                case PRACTICE_MODES.COMBINED:
+                    completionMessage = `Review completed!<br>` +
+                        `Meanings: ${progress.meaningProgress}/${progress.total/3} | ` +
+                        `Readings: ${progress.readingProgress}/${progress.total/3} | ` +
+                        `Recognition: ${progress.recognitionProgress}/${progress.total/3}`;
+                    break;
+                case PRACTICE_MODES.STANDARD:
+                    completionMessage = `Review completed!<br>` +
+                        `Meanings: ${progress.meaningProgress}/${progress.total/2} | ` +
+                        `Readings: ${progress.readingProgress}/${progress.total/2}`;
+                    break;
+                default:
+                    completionMessage = `Review completed!<br>${progress.current}/${progress.total} Correct`;
+            }
         }
 
         const $completionContent = $("<div>")

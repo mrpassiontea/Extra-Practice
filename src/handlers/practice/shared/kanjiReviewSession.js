@@ -13,6 +13,10 @@ class KanjiReviewSession extends BaseReviewSession {
         this.correctMeanings = new Set();
         this.correctReadings = new Set();
         this.correctRecognition = new Set();
+
+        this.endlessMode = config.endlessMode || ENDLESS_MODES.DISABLED;
+        this.highScore = 0;
+        this.currentStreak = 0;
         
         // Initialize cards based on mode
         this.initializeCards();
@@ -105,6 +109,15 @@ class KanjiReviewSession extends BaseReviewSession {
     }
 
     nextItem() {
+        if (this.endlessMode !== ENDLESS_MODES.DISABLED) {
+            // In endless mode, if we run out of items, reset and shuffle again
+            if (this.remainingItems.length === 0) {
+                this.remainingItems = this.shuffleArray([...this.allCards]);
+            }
+            this.currentItem = this.remainingItems.shift();
+            return this.currentItem;
+        }
+
         if (this.remainingItems.length === 0) {
             // Get items that haven't been answered correctly
             const remainingUnlearned = [];
@@ -186,21 +199,57 @@ class KanjiReviewSession extends BaseReviewSession {
         switch (this.currentItem.type) {
             case "meaning":
                 isCorrect = this.checkMeaningAnswer(userAnswer);
-                if (isCorrect) this.correctMeanings.add(this.currentItem.id);
+                if (isCorrect) {
+                    this.correctMeanings.add(this.currentItem.id);
+                    if (this.endlessMode !== ENDLESS_MODES.DISABLED) {
+                        this.currentStreak++;
+                        this.updateHighScore();
+                    }
+                } else {
+                    if (this.endlessMode === ENDLESS_MODES.HARDCORE) {
+                        this.currentStreak = 0;
+                    }
+                }
                 break;
                 
             case "reading":
                 isCorrect = this.checkReadingAnswer(userAnswer);
-                if (isCorrect) this.correctReadings.add(this.currentItem.id);
+                if (isCorrect) {
+                    this.correctReadings.add(this.currentItem.id);
+                    if (this.endlessMode !== ENDLESS_MODES.DISABLED) {
+                        this.currentStreak++;
+                        this.updateHighScore();
+                    }
+                } else {
+                    if (this.endlessMode === ENDLESS_MODES.HARDCORE) {
+                        this.currentStreak = 0;
+                    }
+                }
                 break;
                 
             case "recognition":
                 isCorrect = parseInt(userAnswer) === this.currentItem.id;
-                if (isCorrect) this.correctRecognition.add(this.currentItem.id);
+                if (isCorrect) {
+                    this.correctRecognition.add(this.currentItem.id);
+                    if (this.endlessMode !== ENDLESS_MODES.DISABLED) {
+                        this.currentStreak++;
+                        this.updateHighScore();
+                    }
+                } else {
+                    if (this.endlessMode === ENDLESS_MODES.HARDCORE) {
+                        this.currentStreak = 0;
+                    }
+                }
                 break;
         }
 
         return isCorrect;
+    }
+
+    updateHighScore() {
+        if (this.currentStreak > this.highScore) {
+            this.highScore = this.currentStreak;
+        }
     }
 
     checkMeaningAnswer(userAnswer) {
@@ -225,6 +274,10 @@ class KanjiReviewSession extends BaseReviewSession {
     }
 
     isComplete() {
+        if (this.endlessMode !== ENDLESS_MODES.DISABLED) {
+            return false;
+        }
+
         const progress = this.getProgress();
         return progress.current === progress.total;
     }
@@ -232,6 +285,16 @@ class KanjiReviewSession extends BaseReviewSession {
     getProgress() {
         const totalKanji = this.originalItems.length;
         let total, current;
+
+        if (this.endlessMode !== ENDLESS_MODES.DISABLED) {
+            return {
+                total: Infinity,
+                current: this.currentStreak,
+                highScore: this.highScore,
+                currentStreak: this.currentStreak,
+                endlessMode: this.endlessMode
+            };
+        }
 
         switch (this.mode) {
             case PRACTICE_MODES.STANDARD:

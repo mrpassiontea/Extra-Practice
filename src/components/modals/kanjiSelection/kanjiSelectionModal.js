@@ -1,12 +1,14 @@
-import { modalTemplate, styles, theme, PRACTICE_MODES } from "../../../constants/index";
+import { modalTemplate, styles, theme, PRACTICE_MODES, ENDLESS_MODES } from "../../../constants/index";
 import { MODAL_STATES, EVENTS } from "./types";
 import KanjiGrid from "./kanjiGrid";
+import { EndlessToggle } from "../../buttons/endlessToggle";
 
 class KanjiSelectionModal {
     constructor(kanji, allUnlockedKanji) {
         this.kanji = kanji;
         this.allUnlockedKanji = allUnlockedKanji;
         this.selectedMode = PRACTICE_MODES.STANDARD;
+        this.endlessMode = ENDLESS_MODES.DISABLED;
         this.state = MODAL_STATES.READY;
         this.totalKanji = kanji.length;
         this.$modal = null;
@@ -81,7 +83,10 @@ class KanjiSelectionModal {
 
     createModeSelector() {
         const $container = $("<div>")
-            .css(styles.practiceModal.modeSelector.container);
+            .css({
+                ...styles.practiceModal.modeSelector.container,
+                marginBottom: theme.spacing.md
+            });
 
         const $label = $("<div>")
             .text("Select Practice Mode")
@@ -120,6 +125,13 @@ class KanjiSelectionModal {
         return $container.append($label, $options);
     }
 
+    createEndlessModeSelector() {
+        const endlessToggle = new EndlessToggle(true, (endlessMode) => {
+            this.endlessMode = endlessMode;
+        });
+        return endlessToggle.createToggleSwitch();
+    }
+
     async render() {
         this.$modal = $(modalTemplate).appendTo("body");
         
@@ -136,7 +148,10 @@ class KanjiSelectionModal {
             });
 
         const $modeSelector = this.createModeSelector();
+        const $endlessModeSelector = this.createEndlessModeSelector();
+
         $modeSelector.insertAfter("#ep-practice-modal-welcome");
+        $endlessModeSelector.insertAfter($modeSelector);
 
         $("#ep-practice-modal-footer").css(styles.practiceModal.footer);
         $("#ep-practice-modal-content").css(styles.practiceModal.contentWrapper);
@@ -193,7 +208,8 @@ class KanjiSelectionModal {
                 this.emit(EVENTS.START_REVIEW, {
                     kanji: selectedKanji,
                     mode: this.selectedMode,
-                    allUnlockedKanji: this.allUnlockedKanji
+                    allUnlockedKanji: this.allUnlockedKanji,
+                    endlessMode: this.endlessMode
                 });
             }
         });

@@ -1,7 +1,7 @@
 export { SELECTORS } from "./selectors";
 export { DB_VALUES } from "./database";
 export { DB_ERRORS } from "./errors";
-export { PRACTICE_MODES } from "./practiceMode";
+export { PRACTICE_MODES, ENDLESS_MODES } from "./practiceMode";
 
 export { 
     modalTemplate,
