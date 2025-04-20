@@ -1,5 +1,5 @@
 import BaseReviewSession from "./baseReviewSession";
-import { PRACTICE_MODES } from "../../../constants/index";
+import { PRACTICE_MODES, ENDLESS_MODES } from "../../../constants/index";
 
 class KanjiReviewSession extends BaseReviewSession {
     constructor(config) {

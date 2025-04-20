@@ -75,58 +75,38 @@ class EndlessToggle {
             });
 
         const createModeButton = (mode, label) => {
-            const baseStyles = {
-                backgroundColor: "transparent",
-                border: `2px solid ${theme.colors.white}`,
-                borderRadius: theme.borderRadius.md,
-                color: theme.colors.white,
-                padding: `${theme.spacing.xs} ${theme.spacing.md}`,
-                cursor: "pointer",
-                transition: "all 0.3s ease",
-                fontSize: theme.typography.fontSize.sm
-            };
-
-            const selectedStyles = {
-                backgroundColor: "rgba(255, 255, 255, 0.1)",
-                border: `2px solid ${this.activeColor}`,
-                color: this.activeColor
-            };
-
-            const hoverStyles = {
-                backgroundColor: "rgba(255, 255, 255, 0.1)",
-                borderColor: this.activeColor
-            };
-
             return $("<button>")
                 .text(label)
-                .css({
-                    ...styles.practiceModal.modeSelector.option.base,
-                    padding: `${theme.spacing.xs} ${theme.spacing.md}`,
-                    fontSize: theme.typography.fontSize.sm
-                })
-                .on("click", function() {
-                    const $button = $(this);
+                .css(styles.practiceModal.modeSelector.option.base)
+                .on("click", (e) => {
+                    const $button = $(e.currentTarget);
                     
                     // Reset all buttons to base style
                     $modeOptions.find("button").css(styles.practiceModal.modeSelector.option.base);
                     
+                    // Apply selected styles with correct activeColor and white text
                     $button.css({
                         ...styles.practiceModal.modeSelector.option.base,
-                        ...styles.practiceModal.modeSelector.option.selected
+                        backgroundColor: "rgba(255, 255, 255, 0.1)",
+                        border: `2px solid ${this.activeColor}`,
+                        color: "white" // White text for contrast
                     });
                     
                     this.endlessMode = mode;
                     this.onEndlessModeChange(mode);
-                }.bind(this))
+                })
                 .hover(
                     function() {
                         if (this.endlessMode !== mode) {
-                            $(this).css(hoverStyles);
+                            $(this).css({
+                                ...styles.practiceModal.modeSelector.option.base,
+                                borderColor: this.activeColor
+                            });
                         }
                     }.bind(this),
                     function() {
                         if (this.endlessMode !== mode) {
-                            $(this).css(baseStyles);
+                            $(this).css(styles.practiceModal.modeSelector.option.base);
                         }
                     }.bind(this)
                 );
@@ -138,7 +118,7 @@ class EndlessToggle {
 
         $toggleWrapper.on("click", () => {
             const isEnabled = this.endlessMode !== ENDLESS_MODES.DISABLED;
-            
+    
             if (!isEnabled) {
                 this.endlessMode = ENDLESS_MODES.NORMAL;
                 $track.css({
@@ -148,8 +128,7 @@ class EndlessToggle {
                 $thumb.css({
                     transform: "translateX(30px)"
                 });
-                
-                // Show options with animation
+
                 $modeOptions.css({
                     visibility: "visible"
                 });
@@ -158,9 +137,20 @@ class EndlessToggle {
                         opacity: 1,
                         transform: "translateY(0)"
                     });
-                    $normalButton.trigger("click");
+
+                    // Force select the Normal button with the CORRECT COLOR THEME
+                    $modeOptions.find("button").css(styles.practiceModal.modeSelector.option.base);
+                    $normalButton.css({
+                        ...styles.practiceModal.modeSelector.option.base,
+                        backgroundColor: "rgba(255, 255, 255, 0.1)",
+                        border: `2px solid ${this.activeColor}`,
+                        color: "white" // Using white text for better visibility
+                    });
+
+                    // Call onEndlessModeChange to ensure the mode is properly set
+                    this.onEndlessModeChange(ENDLESS_MODES.NORMAL);
                 }, 50);
-            } else {
+            }  else {
                 this.endlessMode = ENDLESS_MODES.DISABLED;
                 $track.css({
                     backgroundColor: "rgba(255, 255, 255, 0.2)",
@@ -169,7 +159,7 @@ class EndlessToggle {
                 $thumb.css({
                     transform: "translateX(0)"
                 });
-                
+
                 // Hide options with animation
                 $modeOptions.css({
                     opacity: 0,

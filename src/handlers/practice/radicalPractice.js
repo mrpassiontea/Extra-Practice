@@ -3,7 +3,7 @@ import { ReviewSessionModal, REVIEW_EVENTS } from "../../components/modals/revie
 import { disableScroll, enableScroll } from "./shared/modalHandler";
 import { RadicalReviewSession } from "./shared/index";
 import { getCurrentLevelRadicals } from "../../services/wkof/index";
-import { styles } from "../../constants/index";
+import { ENDLESS_MODES, styles } from "../../constants/index";
 
 export async function handleRadicalPractice() {
     try {
@@ -45,6 +45,16 @@ async function startRadicalReview(selectedRadicals, endlessMode) {
             .on(REVIEW_EVENTS.CLOSE, () => {
                 const progress = reviewSession.getProgress();
                 $("#ep-review-modal-header").remove();
+
+                let statusMessage;
+
+                if (reviewSession.endlessMode !== ENDLESS_MODES.DISABLED) {
+                    const endlessType = reviewSession.endlessMode === ENDLESS_MODES.HARDCORE ? "Hardcore" : "Normal";
+                    statusMessage = `${endlessType} | Streak: ${progress.currentStreak} | Best: ${progress.highScore}`;
+                } else {
+                    statusMessage = `${progress.current}/${progress.total} Correct (${progress.percentComplete}%)`;
+                }
+
                 $("#ep-review-content")
                     .empty()
                     .append(
@@ -56,7 +66,7 @@ async function startRadicalReview(selectedRadicals, endlessMode) {
                                         ...styles.reviewModal.progress,
                                         marginBottom: 0
                                     },
-                                    text: `${progress.current}/${progress.total} Correct (${progress.percentComplete}%)` 
+                                    text: statusMessage
                                 }), 
                                 $("<p>", {
                                     css: {
@@ -67,7 +77,7 @@ async function startRadicalReview(selectedRadicals, endlessMode) {
                                 })
                             ])
                     );
-
+                
                 setTimeout(() => {
                     enableScroll();
                     reviewModal.remove();

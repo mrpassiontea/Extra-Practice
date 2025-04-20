@@ -110,20 +110,27 @@ export class ReviewSessionModal {
 
         if (this.reviewSession.endlessMode !== ENDLESS_MODES.DISABLED) {
             const endlessType = this.reviewSession.endlessMode === ENDLESS_MODES.HARDCORE ? "Hardcore" : "Normal";
-            let progressText = `${endlessType} Endless | Current Streak: ${progress.currentStreak}`;
-            
+            // More compact format to prevent wrapping
+            let progressText = `${endlessType} | Streak: ${progress.currentStreak}`;
+
             if (progress.highScore > 0) {
-                progressText += ` | High Score: ${progress.highScore}`;
+                progressText += ` | Best: ${progress.highScore}`;
             }
-            
-            $("#ep-review-progress-correct").html(progressText);
-            // Add a small indicator showing this is an endless session
-            $("#ep-review-exit").text("End Endless Session");
+
+            $("#ep-review-progress-correct")
+                .html(progressText)
+                .css({
+                    fontSize: theme.typography.fontSize.xs,
+                    whiteSpace: "nowrap" // Prevent text wrapping
+                });
+
+            // Also update exit button text
+            $("#ep-review-exit").text("End Session");
             return;
         }
-
+    
         let progressText;
-
+    
         switch (mode) {
             case PRACTICE_MODES.ENGLISH_TO_KANJI:
                 progressText = `${progress.recognitionProgress}/${progress.total} Correct`;
@@ -138,17 +145,21 @@ export class ReviewSessionModal {
                              `Readings: ${progress.readingProgress}/${progress.total/2}`;
                 break;
             default: // RADICAL 
-                progressText = `${progress.current}/${progress.total/1} Correct`;
+                progressText = `${progress.current}/${progress.total} Correct`;
         }
-
+    
         $("#ep-review-progress-correct").html(progressText);
-
-        if (mode === PRACTICE_MODES.COMBINED) {
+    
+        if (mode === PRACTICE_MODES.COMBINED || this.reviewSession.endlessMode !== ENDLESS_MODES.DISABLED) {
             $("#ep-review-progress-correct").css({
                 fontSize: theme.typography.fontSize.xs
             });
+        } else {
+            // Reset font size for other cases
+            $("#ep-review-progress-correct").css({
+                fontSize: theme.typography.fontSize.md
+            });
         }
-        
     }
 
     showReviewInterface() {
@@ -253,6 +264,8 @@ export class ReviewSessionModal {
 
             if (this.reviewSession.endlessMode === ENDLESS_MODES.HARDCORE) {
                 resultMessage = "Incorrect - Score Reset to 0!";
+                // Force update the progress display to show the reset score
+                this.updateProgress();
             }
 
             $("#ep-review-result-container")
@@ -344,8 +357,9 @@ export class ReviewSessionModal {
 
         if (this.reviewSession.endlessMode !== ENDLESS_MODES.DISABLED) {
             const endlessType = this.reviewSession.endlessMode === ENDLESS_MODES.HARDCORE ? "Hardcore" : "Normal";
-            completionMessage = `${endlessType} Endless Session Completed!<br>` +
-                `Final Streak: ${progress.currentStreak} | High Score: ${progress.highScore}`;
+            
+            completionMessage = `${endlessType} Session Complete!<br>` +
+                `Streak: ${progress.currentStreak} | Best: ${progress.highScore}`;
         } else {
             switch (mode) {
                 case PRACTICE_MODES.ENGLISH_TO_KANJI:
@@ -450,7 +464,11 @@ export class ReviewSessionModal {
             .on("click", "#ep-review-continue", this.handleNextItem);
 
         $("#ep-review-exit").on("click", () => {
-            this.emit(REVIEW_EVENTS.CLOSE);
+            if (this.reviewSession.endlessMode !== ENDLESS_MODES.DISABLED) {
+                this.showCompletionScreen();
+            } else {
+                this.emit(REVIEW_EVENTS.CLOSE);
+            }
         });
 
         this.updateProgress();

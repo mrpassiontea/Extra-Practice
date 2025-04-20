@@ -3,7 +3,7 @@ import { ReviewSessionModal, REVIEW_EVENTS } from "../../components/modals/revie
 import { disableScroll, enableScroll } from "./shared/modalHandler";
 import { KanjiReviewSession } from "./shared/index";
 import { getCurrentLevelKanji } from "../../services/wkof/index";
-import { styles, PRACTICE_MODES } from "../../constants/index";
+import { styles, PRACTICE_MODES, ENDLESS_MODES } from "../../constants/index";
 
 export async function handleKanjiPractice() {
     try {
@@ -45,7 +45,7 @@ async function startKanjiReview(selectedKanji, mode, allUnlockedKanji, endlessMo
             .on(REVIEW_EVENTS.CLOSE, () => {
                 const progress = reviewSession.getProgress();
                 $("#ep-review-modal-header").remove();
-
+            
                 const closingContent = [$("<p>", {
                     css: {
                         marginTop: 0,
@@ -53,20 +53,32 @@ async function startKanjiReview(selectedKanji, mode, allUnlockedKanji, endlessMo
                     },
                     text: "Closing..."
                 })];
-
+            
                 $("#ep-review-content")
                     .empty()
                     .append(
                         $("<div>")
                             .css(styles.reviewModal.content)
                             .append((() => {
-                                if (reviewSession.mode === PRACTICE_MODES.STANDARD) {
+                                // First check if this is an endless mode session
+                                if (reviewSession.endlessMode !== ENDLESS_MODES.DISABLED) {
+                                    const endlessType = reviewSession.endlessMode === ENDLESS_MODES.HARDCORE ? "Hardcore" : "Normal";
+                                    let statusMessage = `${endlessType} | Streak: ${progress.currentStreak} | Best: ${progress.highScore}`;
                                     closingContent.unshift($("<p>", { 
                                         css: {
                                             ...styles.reviewModal.progress,
                                             marginBottom: 0
                                         },
-                                        text: `Meanings: ${progress.meaningProgress}/${progress.total/2} - Readings: ${progress.readingProgress}/${progress.total/2}`
+                                        text: statusMessage
+                                    }));
+                                    return closingContent;
+                                } else if (reviewSession.mode === PRACTICE_MODES.STANDARD) {
+                                    closingContent.unshift($("<p>", { 
+                                        css: {
+                                            ...styles.reviewModal.progress,
+                                            marginBottom: 0
+                                        },
+                                        text: `Meanings: ${progress.meaningProgress}/${progress.total/2} | Readings: ${progress.readingProgress}/${progress.total/2}`
                                     }));
                                     return closingContent;
                                 } else if (reviewSession.mode === PRACTICE_MODES.ENGLISH_TO_KANJI) {
@@ -92,7 +104,7 @@ async function startKanjiReview(selectedKanji, mode, allUnlockedKanji, endlessMo
                                 }
                             })())
                     );
-
+                
                 setTimeout(() => {
                     enableScroll();
                     reviewModal.remove();
